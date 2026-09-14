@@ -190,6 +190,23 @@ export class RobotApiClient {
     return this.request('POST', '/api/robot/disable');
   }
 
+  /** POST /api/robot/reset — 清除报警并复位，仅在 ERROR_STATE 下有效。
+   *  不抛出，返回原始响应，由调用方判断 success。 */
+  async resetRobot(): Promise<ApiResponse<{ robot_state: string; enabled: boolean }>> {
+    const url = new URL('/api/robot/reset', this.baseUrl);
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Rocos-Client-Id': RobotApiClient.getClientId(),
+    };
+    const token = RobotApiClient.getStoredToken();
+    if (token) headers['X-Rocos-Control-Token'] = token;
+    const response = await fetch(url.toString(), { method: 'POST', headers });
+    const json = await response.json();
+    console.log('[RobotApiClient] /api/robot/reset response:', json);
+    return json as ApiResponse<{ robot_state: string; enabled: boolean }>;
+  }
+
   /** GET /api/robot/enabled — 查询使能状态（后端返回 enabled + disabled + robot_state） */
   async isEnabled(): Promise<EnabledResponse> {
     return this.request<EnabledResponse>('GET', '/api/robot/enabled');

@@ -714,6 +714,102 @@ html, body, #root {
   color: #2563eb;
 }
 
+/* Robot reset overlay — fades in over the 3D viewport when robot enters ERROR_STATE */
+.robot-reset-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 35;
+  /* Never intercept pointer events on the overlay layer itself — only the button gets them */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.robot-reset-overlay.visible {
+  opacity: 1;
+}
+
+.robot-reset-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.7);
+  background: rgba(17, 19, 24, 0.72);
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 28px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 8px 32px rgba(0, 0, 0, 0.45);
+  transition: background 0.18s, box-shadow 0.18s, border-color 0.18s, color 0.18s;
+  animation: reset-btn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reset-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15), 0 8px 32px rgba(0, 0, 0, 0.45); }
+  50%       { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.28), 0 8px 32px rgba(0, 0, 0, 0.45); }
+}
+
+.robot-reset-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.9);
+  color: #f87171;
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.25), 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: none;
+}
+
+.robot-reset-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.robot-reset-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.robot-reset-btn .robot-reset-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: inherit;
+}
+
+.robot-reset-spin {
+  display: inline-block;
+  font-size: 28px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+[data-theme='light'] .robot-reset-btn {
+  background: rgba(255, 255, 255, 0.82);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.65);
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12), 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme='light'] .robot-reset-btn:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.9);
+  color: #b91c1c;
+}
+
 /* Takeover (control right) circle button in toolbar-center */
 .takeover-btn {
   display: inline-flex;

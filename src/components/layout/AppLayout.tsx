@@ -88,6 +88,65 @@ function SceneToggles({ style }: { style?: React.CSSProperties }) {
   );
 }
 
+/** Isolated component so that high-frequency WebSocket updates to robotStateStore
+ *  never cause AppLayout (and the 3D canvas tree) to re-render. */
+function ResetButton() {
+  const t = useT();
+  const host = useConnectionStore((s) => s.host);
+  const port = useConnectionStore((s) => s.port);
+  const isConnected = useConnectionStore((s) => s.isConnected);
+  const robotStateVal = useRobotStateStore((s) => s.robotState?.robot_state);
+  const isErrorState = isConnected && robotStateVal === 'ERROR_STATE';
+  const [resetting, setResetting] = useState(false);
+
+  const handleReset = useCallback(async () => {
+    setResetting(true);
+    try {
+      const client = new RobotApiClient(host, port);
+      const resetResp = await client.resetRobot();
+      console.log('[ResetButton] reset response:', resetResp);
+
+      // Poll robot state until it leaves ERROR_STATE (max 10s, 500ms interval).
+      // We always poll regardless of resetResp.success — the backend may return
+      // success:false with code -2307 while still executing the reset (the state
+      // transition is the ground truth, not the API success flag).
+      const POLL_INTERVAL = 500;
+      const POLL_TIMEOUT = 10_000;
+      const deadline = Date.now() + POLL_TIMEOUT;
+      let finalState = 'ERROR_STATE';
+      while (finalState === 'ERROR_STATE' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+        const state = await client.getRobotState();
+        finalState = state.robot_state ?? 'ERROR_STATE';
+      }
+
+      if (finalState !== 'ERROR_STATE') {
+        message.success(t('control.resetSuccess'));
+      } else {
+        message.error(t('control.resetFailed', { msg: resetResp.message ?? 'timeout' }));
+      }
+    } catch (err) {
+      message.error(t('control.resetFailed', { msg: err instanceof Error ? err.message : String(err) }));
+    } finally {
+      setResetting(false);
+    }
+  }, [host, port, t]);
+
+  return (
+    <div className={`robot-reset-overlay${isErrorState ? ' visible' : ''}`}>
+      <button
+        className="robot-reset-btn"
+        disabled={resetting || !isErrorState}
+        onClick={handleReset}
+        title={t('control.reset')}
+      >
+        {resetting ? <span className="robot-reset-spin">↻</span> : <WarningOutlined />}
+        <span className="robot-reset-label">Reset</span>
+      </button>
+    </div>
+  );
+}
+
 function TrajectoryLineWrapper() {
   const showTrajectory = useUIStore((s) => s.showTrajectory);
   const robotState = useRobotStateStore((s) => s.robotState);
@@ -538,6 +597,10 @@ export function AppLayout() {
                 </div>
               </div>
             )}
+
+            {/* Error state reset button — isolated component so its store subscription
+                doesn't trigger AppLayout re-renders on every WebSocket tick. */}
+            <ResetButton />
 
             {/* Floating scene toggles (bottom-center of the visible 3D area) */}
             <SceneToggles style={sceneOverlayStyle} />

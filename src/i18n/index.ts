@@ -162,6 +162,9 @@ const DICT = {
   'control.takeoverCancel': { en: 'Cancel', zh: '取消' },
   'control.takeoverSuccess': { en: 'Control right acquired', zh: '已成功获取控制权' },
   'control.takeoverFailed': { en: 'Takeover failed: {msg}', zh: '夺权失败: {msg}' },
+  'control.reset': { en: 'Reset robot', zh: '机器人复位' },
+  'control.resetSuccess': { en: 'Robot reset successfully', zh: '机器人已成功复位' },
+  'control.resetFailed': { en: 'Reset failed: {msg}', zh: '复位失败: {msg}' },
   'control.acquireFailed': { en: 'Failed to acquire control: {msg}', zh: '获取控制权失败: {msg}' },
 
   // ---- System Settings ----
