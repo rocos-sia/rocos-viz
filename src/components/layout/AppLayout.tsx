@@ -47,6 +47,8 @@ import {
   ApiOutlined,
   DisconnectOutlined,
   SafetyCertificateOutlined,
+  SafetyCertificateFilled,
+  SecurityScanOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 
@@ -399,6 +401,33 @@ export function AppLayout() {
 
         {/* Centered connection status pill */}
         <div className="toolbar-center">
+          {/* Control right status — circle icon button, left of the conn-pill */}
+          {isConnected && (
+            controlToken ? (
+              <Tooltip title={t('control.acquired')}>
+                <button className="takeover-btn has-control">
+                  <SafetyCertificateFilled />
+                </button>
+              </Tooltip>
+            ) : (
+              <Popconfirm
+                title={t('control.takeoverTitle')}
+                description={t('control.takeoverConfirm', {
+                  owner: controlOwnerName ?? controlOwnerIp ?? 'unknown',
+                })}
+                okText={t('control.takeoverOk')}
+                cancelText={t('control.takeoverCancel')}
+                okButtonProps={{ danger: true }}
+                onConfirm={handleTakeover}
+              >
+                <Tooltip title={t('control.takeover')}>
+                  <button className="takeover-btn no-control">
+                    <SecurityScanOutlined />
+                  </button>
+                </Tooltip>
+              </Popconfirm>
+            )
+          )}
           {isConnected ? (
             <Popconfirm
               title={t('conn.disconnectTitle')}
@@ -430,40 +459,6 @@ export function AppLayout() {
           {/* Enable toggle — sits right beside the connect pill */}
           <EnableButton />
         </div>
-
-        {/* Control right status — right of center, left of toolbar-spacer */}
-        {isConnected && (
-          controlToken ? (
-            <Tooltip title={t('control.acquired')}>
-              <Button
-                size="middle"
-                icon={<SafetyCertificateOutlined />}
-                style={{ color: '#52c41a', borderColor: '#52c41a', background: 'rgba(82,196,26,0.08)' }}
-              >
-                {t('control.acquired')}
-              </Button>
-            </Tooltip>
-          ) : (
-            <Popconfirm
-              title={t('control.takeoverTitle')}
-              description={t('control.takeoverConfirm', {
-                owner: controlOwnerName ?? controlOwnerIp ?? 'unknown',
-              })}
-              okText={t('control.takeoverOk')}
-              cancelText={t('control.takeoverCancel')}
-              okButtonProps={{ danger: true }}
-              onConfirm={handleTakeover}
-            >
-              <Button
-                size="middle"
-                danger
-                icon={<WarningOutlined />}
-              >
-                {t('control.takeover')}
-              </Button>
-            </Popconfirm>
-          )
-        )}
 
         <div className="toolbar-spacer" />
 
