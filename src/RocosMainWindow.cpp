@@ -4,11 +4,35 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QPainter>
+#include <QPixmap>
 #include <QStyledItemDelegate>
+#include <QShortcut>
+#include <QWindowStateChangeEvent>
 
 RocosMainWindow::RocosMainWindow(QWidget *parent)
         : QMainWindow(parent), ui(new Ui::RocosMainWindow) {
     ui->setupUi(this);
+
+    auto *landauLogo = new QLabel(ui->widget);
+    landauLogo->setFixedSize(40, 40);
+    landauLogo->setAlignment(Qt::AlignCenter);
+    QPixmap logoPixmap = QPixmap(":/res/landau.png").scaled(
+            landauLogo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    {
+        QPainter painter(&logoPixmap);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(logoPixmap.rect(), Qt::white);
+    }
+    landauLogo->setPixmap(logoPixmap);
+    ui->horizontalLayout->insertWidget(0, landauLogo);
+
+    auto *exitFullscreen = new QShortcut(QKeySequence(Qt::Key_Escape), this);
+    connect(exitFullscreen, &QShortcut::activated, this, [this]() {
+        if (isFullScreen()) {
+            showNormal();
+        }
+    });
 
     //给Log增加一个右键菜单clear，清除之前记录
     //ui->logEdit->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -218,6 +242,22 @@ RocosMainWindow::~RocosMainWindow() {
     delete ui;
 }
 
+
+void RocosMainWindow::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::WindowStateChange) {
+        auto *stateEvent = static_cast<QWindowStateChangeEvent *>(event);
+        if (isMaximized() && !isFullScreen()
+                && !(stateEvent->oldState() & Qt::WindowMaximized)) {
+            // 等系统完成最大化状态切换后，再进入全屏，避免嵌套处理窗口事件。
+            QTimer::singleShot(0, this, [this]() {
+                if (isMaximized() && !isFullScreen()) {
+                    showFullScreen();
+                }
+            });
+        }
+    }
+}
 
 void RocosMainWindow::on_pushButton_clicked() {
     QVector<double> jntRads;

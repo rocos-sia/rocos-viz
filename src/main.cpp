@@ -55,9 +55,7 @@ int main(int argc, char *argv[])
     }
 
     RocosMainWindow w;
-    w.setWindowFlag(Qt::FramelessWindowHint);
-    // w.show();
-    w.showFullScreen();
+    w.show();
 
     splash->finish(&w);
     return a.exec();

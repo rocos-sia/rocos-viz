@@ -31,6 +31,9 @@ public:
     RocosMainWindow(QWidget *parent = nullptr);
     ~RocosMainWindow();
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private slots:
     void on_pushButton_clicked();
 
