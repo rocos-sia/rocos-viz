@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QTreeWidget>
+#include <QDebug>
 
 namespace Ui {
 class PlotConfigDialog;

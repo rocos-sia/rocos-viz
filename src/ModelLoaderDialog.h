@@ -2,6 +2,7 @@
 #define MODELLOADERDIALOG_H
 
 #include <QDialog>
+#include <QDebug>
 
 namespace Ui {
 class ModelLoaderDialog;

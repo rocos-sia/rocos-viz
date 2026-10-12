@@ -24,7 +24,9 @@ PlotWidget::PlotWidget(QWidget *parent) :
     addPlot(); // Chart #3
     addPlot(); // Chart #4
 
-    funcs.resize(4); // 初始化funcs外层，4个chart用. by think
+    for (int i = 0; i < 4; ++i) {
+        funcs.append(QList<std::function<double(void)>>());
+    }
 
     //==========设置初始布局1x1==========
 

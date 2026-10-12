@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QtCharts>
 #include <ConnectDialog.h>
+#include <QDebug>
 
 
 #define TYPE_JOINT_SPACE 0 // Joint Space

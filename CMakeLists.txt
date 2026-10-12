@@ -46,7 +46,7 @@ set(${PROJECT_NAME}_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAM
 
 if (UNIX AND NOT APPLE)
     list(APPEND CMAKE_PREFIX_PATH "/opt/grpc")
-    list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/6.2.4/gcc_64")
+#     list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/6.2.4/gcc_64")
 endif ()
 
 include(cmake/common.cmake) # gRPC
@@ -120,6 +120,15 @@ add_library(rocos::protocol ALIAS protocol)
 #find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets LinguistTools Network OpenGLWidgets REQUIRED)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Network Charts REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network Charts REQUIRED)
+
+if(QT_VERSION_MAJOR EQUAL 6)
+        find_package(Qt6 COMPONENTS OpenGLWidgets REQUIRED)
+        set(QT_OPENGL_TARGET Qt6::OpenGLWidgets)
+else()
+        find_package(Qt5 COMPONENTS OpenGL REQUIRED)
+        set(QT_OPENGL_TARGET Qt5::OpenGL)
+endif()
+
 
 # VTK
 #find_package(VTK COMPONENTS
@@ -246,7 +255,7 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Network
-        Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+        ${QT_OPENGL_TARGET}
         Qt${QT_VERSION_MAJOR}::Charts
         ${VTK_LIBRARIES}
         Eigen3::Eigen
