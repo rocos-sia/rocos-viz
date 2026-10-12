@@ -143,9 +143,13 @@ SceneWidget::SceneWidget(QWidget *parent) :
 
         vtkNew<vtkImageActor> imageActor;
         imageActor->SetInputData(castFilter->GetOutput());
-        imageActor->SetPosition(1.1,-1,0);
+        imageActor->SetOpacity(0.5);
         imageActor->RotateZ(90.0);
         imageActor->SetScale(0.0005);
+
+        // 将旋转、缩放后的图片中心平移到世界坐标原点。
+        double* center = imageActor->GetCenter();
+        imageActor->SetPosition(-center[0], -center[1], -center[2]);
 
         renderer->AddActor(imageActor);  // 画Logo
     }
