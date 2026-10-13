@@ -71,7 +71,15 @@ function mapState(raw: any): RobotState {
 }
 
 export class RobotApiClient {
+  private static legacyEndpoints = new Set<string>();
   private baseUrl: string;
+
+  private cartesianJerkParams(jerk: number | undefined, defaultValue: number): { jerk?: number } {
+    // Keep an explicitly supplied jerk so unsupported values get a clear API
+    // error. Do not inject a new-core default into a legacy controller request.
+    if (jerk !== undefined) return { jerk };
+    return RobotApiClient.legacyEndpoints.has(this.baseUrl) ? {} : { jerk: defaultValue };
+  }
 
   constructor(host: string, port: number | string) {
     const normalizedHost = (host || '').trim();
@@ -159,6 +167,10 @@ export class RobotApiClient {
     }
 
     const json: ApiResponse<T> = JSON.parse(text);
+    const profile = json.data as { api_profile?: string } | null;
+    if (json.success && profile?.api_profile === 'legacy_robot') {
+      RobotApiClient.legacyEndpoints.add(this.baseUrl);
+    }
     console.log(`[RobotApiClient] Parsed response success:`, json.success);
 
     if (!json.success) {
@@ -214,8 +226,7 @@ export class RobotApiClient {
 
   /**
    * POST /api/robot/workmode — 设置工作模式
-   * 注意：当前后端 handler 已被注释（no-op），调用会返回 404。
-   * 保留此方法以便后端重新启用后直接可用。
+   * 工作模式切换由控制器校验当前运动状态。
    */
   async setWorkMode(mode: string): Promise<void> {
     return this.request('POST', '/api/robot/workmode', { mode });
@@ -250,7 +261,7 @@ export class RobotApiClient {
       pose,
       velocity: velocity ?? MAX_CARTESIAN_SPEED * DEFAULT_SPEED_FACTOR,
       acceleration: acceleration ?? MAX_CARTESIAN_ACCELERATION * DEFAULT_SPEED_FACTOR,
-      jerk: jerk ?? 1.25,
+      ...this.cartesianJerkParams(jerk, 1.25),
     };
     if (toolName) body.tool_name = toolName;
     return this.request<MotionResponse>('POST', '/api/robot/movel', body);
@@ -283,7 +294,7 @@ export class RobotApiClient {
       joints,
       velocity: velocity ?? MAX_CARTESIAN_SPEED * DEFAULT_SPEED_FACTOR,
       acceleration: acceleration ?? MAX_CARTESIAN_ACCELERATION * DEFAULT_SPEED_FACTOR,
-      jerk: jerk ?? 1.25,
+      ...this.cartesianJerkParams(jerk, 1.25),
     };
     if (toolName) body.tool_name = toolName;
     return this.request<MotionResponse>('POST', '/api/robot/movel_fk', body);
@@ -303,7 +314,7 @@ export class RobotApiClient {
       pose_to: params.poseTo,
       velocity: params.velocity ?? 0.25,
       acceleration: params.acceleration ?? 0.25,
-      jerk: params.jerk ?? 2.5,
+      ...this.cartesianJerkParams(params.jerk, 2.5),
     };
     if (params.poseStart) body.pose_start = params.poseStart;
     return this.request<MotionResponse>('POST', '/api/robot/movec', body);
