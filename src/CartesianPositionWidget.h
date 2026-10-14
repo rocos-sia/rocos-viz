@@ -9,6 +9,7 @@
 namespace Ui {
 class CartesianPositionWidget;
 }
+class JogButtonController;
 
 class CartesianPositionWidget : public QWidget
 {
@@ -66,10 +67,9 @@ private:
 
     double r2d = 1000.0; // 由于笛卡尔位置只有rpy需要转换角度，默认为1000, 单位mm
 
-    // QTimer* timerPlus;
-    // QTimer* timerMinus;
+    JogButtonController *jogController_;
 
-    int     id;
+    int     id = 0;
 
 };
 

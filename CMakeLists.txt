@@ -269,6 +269,24 @@ vtk_module_autoinit(
         MODULES ${VTK_LIBRARIES}
 )
 
+include(CTest)
+if(BUILD_TESTING)
+    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Test QUIET)
+    if(TARGET Qt${QT_VERSION_MAJOR}::Test)
+        add_executable(jog_button_test
+            test/jog_button_test.cpp
+            src/JogButtonController.h
+            src/JointPositionWidget.cpp src/JointPositionWidget.h src/JointPositionWidget.ui
+            src/CartesianPositionWidget.cpp src/CartesianPositionWidget.h src/CartesianPositionWidget.ui
+            src/PositionBar.cpp src/PositionBar.h)
+        target_link_libraries(jog_button_test PRIVATE
+            Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Test)
+        add_test(NAME jog_button_test COMMAND jog_button_test)
+        set_tests_properties(jog_button_test PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 15)
+    endif()
+endif()
+
 #qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 
 #configure_file(${MODELS} ./ COPYONLY)

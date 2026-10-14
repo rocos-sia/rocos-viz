@@ -155,13 +155,7 @@ QPushButton:pressed, QPushButton:checked {
         </size>
        </property>
        <property name="autoRepeat">
-        <bool>true</bool>
-       </property>
-       <property name="autoRepeatDelay">
-        <number>10</number>
-       </property>
-       <property name="autoRepeatInterval">
-        <number>80</number>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -252,13 +246,7 @@ QPushButton:pressed, QPushButton:checked {
         </size>
        </property>
        <property name="autoRepeat">
-        <bool>true</bool>
-       </property>
-       <property name="autoRepeatDelay">
-        <number>10</number>
-       </property>
-       <property name="autoRepeatInterval">
-        <number>80</number>
+        <bool>false</bool>
        </property>
       </widget>
      </item>

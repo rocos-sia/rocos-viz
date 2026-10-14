@@ -1,8 +1,7 @@
 #include "JointPositionWidget.h"
 #include "ui_JointPositionWidget.h"
 
-#include <iostream>
-#include <QTimer>
+#include "JogButtonController.h"
 
 JointPositionWidget::JointPositionWidget(QWidget *parent) :
     QWidget(parent),
@@ -13,20 +12,14 @@ JointPositionWidget::JointPositionWidget(QWidget *parent) :
     ui->jointPosValBar->setRange(-M_PI*r2d, M_PI*r2d);
     updateJointPosition(jointPos);
 
-    // timerPlus = new QTimer(this);
-    // connect(timerPlus, &QTimer::timeout, this, [=](){
-    //     emit jointPositionJogging(id, 1);
-    // });
-
-    // timerMinus = new QTimer(this);
-    // connect(timerMinus, &QTimer::timeout, this, [=](){
-    //     emit jointPositionJogging(id, -1);
-    // });
+    jogController_ = new JogButtonController(this, ui->jointPosPlusButton,
+        ui->jointPosMinusButton, [this](int direction) { emit jointPositionJogging(id, direction); });
 
 }
 
 JointPositionWidget::~JointPositionWidget()
 {
+    jogController_->stop();
     delete ui;
 }
 
@@ -63,32 +56,21 @@ void JointPositionWidget::on_jointPosValBar_valueChanged(double value)
 
 void JointPositionWidget::on_jointPosPlusButton_pressed()
 {
-    // timerPlus->start(20);
-    emit jointPositionJogging(id, 1);
-
+    jogController_->start(ui->jointPosPlusButton, 1);
 }
 
 void JointPositionWidget::on_jointPosPlusButton_released()
 {
-// TODO: 使用了QButton的AutoRepeat，相当于每隔一段时间自动按下并抬起按键，导致released也一直调用，所以屏蔽了
-//    std::cout << "Joint Pos Minus Released" << std::endl;
-//    emit jointPositionJogging(id, 0);
-    // timerPlus->stop();
-    emit jointPositionJogging(id, 0);
+    jogController_->stop();
 }
 
 void JointPositionWidget::on_jointPosMinusButton_pressed()
 {
-    // timerMinus->start(20);
-    emit jointPositionJogging(id, -1);
-
+    jogController_->start(ui->jointPosMinusButton, -1);
 }
 
 
 void JointPositionWidget::on_jointPosMinusButton_released()
 {
-// TODO: 使用了QButton的AutoRepeat，相当于每隔一段时间自动按下并抬起按键，导致released也一直调用，所以屏蔽了
-//    std::cout << "Joint Pos Minus Released" << std::endl;
-    // timerMinus->stop();
-    emit jointPositionJogging(id, 0);
+    jogController_->stop();
 }

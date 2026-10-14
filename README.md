@@ -47,6 +47,23 @@ make -j`nproc`
 ./rocos-viz
 ```
 
+## gRPC 点动
+
+关节和笛卡尔点动在按下按钮时立即发送指令，长按期间每 50 ms 续发。
+松开、移出按钮、窗口失去激活或控件隐藏/禁用时停止续发并发送一次停止。
+移回按钮不会自动恢复，需重新按下。按钮不使用 Qt autoRepeat，避免重复产生
+released/pressed 信号导致机器人反复减速和启动。
+
+重新编译后需退出旧 viz，再运行 `build/bin/rocos-viz`。
+
+安装 Qt Test 模块后可运行无硬件的控件回归测试：
+
+```bash
+cmake -S . -B build
+cmake --build build -j2
+ctest --test-dir build -R '^jog_button_test$' --output-on-failure
+```
+
 ## Contributor
 
 :bust_in_silhouette: **Yang Luo (luoyang@sia.cn)**

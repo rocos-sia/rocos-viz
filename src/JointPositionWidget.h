@@ -9,6 +9,7 @@
 namespace Ui {
 class JointPositionWidget;
 }
+class JogButtonController;
 
 class JointPositionWidget : public QWidget
 {
@@ -52,11 +53,10 @@ private:
 
     double r2d    = 180.0/M_PI; //radius to degree
 
-    int     id;
+    int     id = 0;
     QString name;
 
-    // QTimer* timerPlus;
-    // QTimer* timerMinus;
+    JogButtonController *jogController_;
 
 
 
