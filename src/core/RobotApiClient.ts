@@ -102,7 +102,7 @@ export class RobotApiClient {
   /** 获取当前保存的控制权 token（由外部 connectionStore 注入） */
   static getStoredToken(): string | null {
     try {
-      const raw = localStorage.getItem('rocos-connection');
+      const raw = sessionStorage.getItem('rocos-connection');
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       return parsed?.state?.controlToken ?? null;
@@ -143,7 +143,8 @@ export class RobotApiClient {
     }
     if (method !== 'GET') {
       const token = RobotApiClient.getStoredToken();
-      if (token) headers['X-Rocos-Control-Token'] = token;
+      if (!token) throw new Error('No control right; acquire control before operating (code: 3006)');
+      headers['X-Rocos-Control-Token'] = token;
       headers['X-Rocos-Client-Id'] = RobotApiClient.getClientId();
     }
 
@@ -561,21 +562,36 @@ export class RobotApiClient {
   /** POST /api/control/release — 释放控制权 */
   async releaseControl(token: string): Promise<void> {
     const url = new URL('/api/control/release', this.baseUrl);
-    await fetch(url.toString(), {
+    const response = await fetch(url.toString(), {
       method: 'POST',
       headers: {
         'X-Rocos-Control-Token': token,
         'X-Rocos-Client-Id': RobotApiClient.getClientId(),
       },
     });
+    const result = await response.json() as ApiResponse<ControlOwnerData>;
+    if (!response.ok || !result.success) throw new Error(result.message || `HTTP ${response.status}`);
   }
 
-  /** GET /api/control/status — 查询控制权状态；携带 token 时顺便续期（返回原始响应，不抛出） */
+  /** Explicit captured token prevents an old request from renewing a new session. */
+  async heartbeatControl(token: string, signal?: AbortSignal): Promise<ApiResponse<ControlOwnerData>> {
+    const response = await fetch(new URL('/api/control/heartbeat', this.baseUrl).toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Rocos-Control-Token': token,
+        'X-Rocos-Client-Id': RobotApiClient.getClientId(),
+      },
+      body: '{}', signal,
+    });
+    if (!response.ok) throw new Error(`Heartbeat HTTP ${response.status}`);
+    return response.json() as Promise<ApiResponse<ControlOwnerData>>;
+  }
+
+  /** GET /api/control/status — 只读查询，不续期。 */
   async getControlStatus(): Promise<ApiResponse<ControlOwnerData>> {
     const url = new URL('/api/control/status', this.baseUrl);
     const headers: Record<string, string> = { Accept: 'application/json' };
-    const token = RobotApiClient.getStoredToken();
-    if (token) headers['X-Rocos-Control-Token'] = token;
     const response = await fetch(url.toString(), { headers });
     return response.json() as Promise<ApiResponse<ControlOwnerData>>;
   }

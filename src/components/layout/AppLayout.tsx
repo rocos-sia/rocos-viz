@@ -3,6 +3,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useUIStore, RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH } from '@/stores/uiStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
+import { startControlHeartbeat } from '@/core/ControlHeartbeat';
 import { RobotViewer } from '@/scene/RobotViewer';
 import { SceneErrorBoundary } from '@/scene/SceneErrorBoundary';
 import { AxesIndicator } from '@/scene/AxesIndicator';
@@ -297,15 +298,29 @@ export function AppLayout() {
   const setControlAcquiredAt = useConnectionStore((s) => s.setControlAcquiredAt);
   const setControlOwner = useConnectionStore((s) => s.setControlOwner);
 
+  const handleDisconnect = useCallback(async () => {
+    const token = useConnectionStore.getState().controlToken;
+    useConnectionStore.getState().reset(); // Stop heartbeat before releasing.
+    if (token) {
+      try { await new RobotApiClient(host, port).releaseControl(token); }
+      catch (error) { console.warn('Control release failed; lease will expire', error); }
+    }
+  }, [host, port]);
+
   const handleTakeover = useCallback(async () => {
     try {
       const client = new RobotApiClient(host, port);
       const result = await client.takeoverControl(`web-${navigator.platform}`);
+      const connection = useConnectionStore.getState();
+      if (!connection.isConnected || connection.host !== host || connection.port !== port) {
+        if (result.success && result.data?.token) await client.releaseControl(result.data.token);
+        return;
+      }
       if (result.success && result.data?.token) {
         setControlToken(result.data.token);
         setControlAcquiredAt(Date.now());
         setControlOwner(result.data.owner_name ?? null, result.data.owner_ip ?? null);
-        if (result.data.client_id_auto && result.data.client_id) {
+        if (result.data.client_id) {
           sessionStorage.setItem('rocos_client_id', result.data.client_id);
         }
         message.success(t('control.takeoverSuccess'));
@@ -315,15 +330,18 @@ export function AppLayout() {
     } catch (err) {
       message.error(t('control.takeoverFailed', { msg: err instanceof Error ? err.message : String(err) }));
     }
-  }, [host, port, setControlToken, setControlOwner, t]);
+  }, [host, port, setControlToken, setControlAcquiredAt, setControlOwner, t]);
 
   // Acquire control right after connecting
   useEffect(() => {
     if (!isConnected) {
       setControlToken(null);
+      setControlAcquiredAt(null);
       setControlOwner(null, null);
       return;
     }
+    // A page reload can restore this tab's credentials; heartbeat validates them.
+    if (useConnectionStore.getState().controlToken) return;
 
     let cancelled = false;
 
@@ -331,12 +349,15 @@ export function AppLayout() {
       try {
         const client = new RobotApiClient(host, port);
         const result = await client.acquireControl(`web-${navigator.platform}`);
-        if (cancelled) return;
+        if (cancelled) {
+          if (result.success && result.data?.token) await client.releaseControl(result.data.token);
+          return;
+        }
         if (result.success && result.data?.token) {
           setControlToken(result.data.token);
           setControlAcquiredAt(Date.now());
           setControlOwner(result.data.owner_name ?? null, result.data.owner_ip ?? null);
-          if (result.data.client_id_auto && result.data.client_id) {
+          if (result.data.client_id) {
             sessionStorage.setItem('rocos_client_id', result.data.client_id);
           }
         } else {
@@ -353,17 +374,36 @@ export function AppLayout() {
     acquireControl();
 
     return () => { cancelled = true; };
-  }, [isConnected, host, port, setControlToken, setControlOwner]);
+  }, [isConnected, host, port, setControlToken, setControlAcquiredAt, setControlOwner]);
+
+  // Renew ownership independently of buttons, robot motion, or read-only polling.
+  useEffect(() => {
+    if (!isConnected || !controlToken) return;
+    const client = new RobotApiClient(host, port);
+    return startControlHeartbeat({
+      heartbeat: (signal) => client.heartbeatControl(controlToken, signal),
+      onRejected: () => {
+        if (useConnectionStore.getState().controlToken !== controlToken) return;
+        setControlToken(null);
+        setControlAcquiredAt(null);
+        message.warning(t('control.lost'));
+      },
+      onError: (error) => console.warn('Control heartbeat failed; retrying without takeover', error),
+    });
+  }, [isConnected, host, port, controlToken, setControlToken, setControlAcquiredAt, t]);
 
   // Poll control status every 1s: detects expiry, server-side token rejection, and takeover
   useEffect(() => {
     if (!isConnected) return;
+    let cancelled = false;
 
     const poll = async () => {
       try {
         const client = new RobotApiClient(host, port);
+        const observedToken = useConnectionStore.getState().controlToken;
         const resp = await client.getControlStatus();
-        const { controlToken: token, controlAcquiredAt } = useConnectionStore.getState();
+        const { controlToken: token } = useConnectionStore.getState();
+        if (cancelled || token !== observedToken) return; // Ignore an older session's response.
 
         if (token) {
           // Server rejected the token even on the read endpoint (non-standard but handle it)
@@ -380,11 +420,7 @@ export function AppLayout() {
             setControlAcquiredAt(null);
             setControlOwner(null, null);
           } else if (
-            // held_for_seconds should track our elapsed time; if it's significantly less,
-            // another client reset the counter via takeover (works even same-machine same-name)
-            controlAcquiredAt !== null &&
-            status.held_for_seconds !== undefined &&
-            (Date.now() - controlAcquiredAt) / 1000 - status.held_for_seconds > 10
+            status.owner_client_id && status.owner_client_id !== RobotApiClient.getClientId()
           ) {
             setControlToken(null);
             setControlAcquiredAt(null);
@@ -401,7 +437,7 @@ export function AppLayout() {
     };
 
     const id = window.setInterval(poll, 1_000);
-    return () => clearInterval(id);
+    return () => { cancelled = true; clearInterval(id); };
   }, [isConnected, host, port, setControlToken, setControlAcquiredAt, setControlOwner]);
 
   // Fetch URDF model from controller on connect
@@ -494,7 +530,7 @@ export function AppLayout() {
               okText={t('conn.disconnect')}
               cancelText={t('conn.cancel')}
               okButtonProps={{ danger: true }}
-              onConfirm={() => useConnectionStore.getState().reset()}
+              onConfirm={handleDisconnect}
             >
               <button className="conn-pill connected" title={t('conn.clickToDisconnect')}>
                 <span className="conn-dot" />
