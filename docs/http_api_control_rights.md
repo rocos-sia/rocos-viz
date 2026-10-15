@@ -19,7 +19,7 @@
 - **按 token 唯一绑定**：控制权绑定到服务端生成的唯一 token；每次 `acquire` 或 `takeover` 都会生成新 token，旧 token 立即失效。
 - **单持有者互斥**：控制权被占用期间，其他 acquire 请求返回 `3008`。
 - **可强制抢占**：任何客户端可通过 `POST /api/control/takeover` 强制夺权，原持有者的 token 立即失效。
-- **自动过期**：控制权 TTL 300s；持有者每次调用任何接口（GET/POST/DELETE）自动续期。断线客户端不会长期占权。
+- **自动过期**：控制权 TTL 300s；持有者通过带 token 和 client_id 的 POST 心跳续期，通过鉴权的写请求也续期；所有普通 GET 不续期。断线客户端不会长期占权。
 - **token 与 client_id 双重绑定**：服务端始终为每次 `acquire`/`takeover` 绑定一个唯一 `client_id`（客户端可主动提供，否则服务端自动生成）；后续写请求必须同时携带 token 和匹配的 `client_id`，防止同源标签页通过共享 `localStorage` 窃取 token。
 - **只读接口无需鉴权**：状态查询/URDF/Mesh/坐标系读取/脚本状态等 GET 接口无需 token。
 - **仅在 HTTP 层**：`Robot` 核心类不感知控制权；机制完全内嵌于 `RobotHttpServer`。
@@ -31,7 +31,7 @@
 | **Control Token** | 服务器颁发的 UUID v4 字符串，代表当前唯一控制权。 |
 | **Owner** | 当前持有 token 的客户端；服务端每次 `acquire`/`takeover` 都会颁发新的 token，旧 token 立即失效。 |
 | **Connection Key** | 可选调试字段，记录 `remote_addr:remote_port`，用于日志审计，不再作为控制权的唯一判定依据。 |
-| **TTL** | Time-to-Live，默认 300 秒。任何来自 owner 且携带正确 token 的请求会刷新 `last_seen_at_`。 |
+| **TTL** | Time-to-Live，默认 300 秒。来自 owner 且同时携带正确 token、client_id 的心跳或写请求会刷新 `last_seen_at_`。 |
 | **Takeover** | 无条件抢占，颁发新 token，原 token 立即失效。 |
 
 ## 4. 状态机
@@ -40,9 +40,9 @@
 stateDiagram-v2
     [*] --> Idle: 服务启动
     Idle --> Held: POST /control/acquire
-    Held --> Held: 任意携带 token 的调用（续期）
+    Held --> Held: 持有者心跳或通过鉴权的写调用（续期）
     Held --> Idle: POST /control/release
-    Held --> Idle: TTL 60s 无活动
+    Held --> Idle: TTL 300s 无续期（可配置）
     Held --> Held: POST /control/takeover（覆盖 token）
 ```
 
@@ -59,6 +59,19 @@ stateDiagram-v2
 CORS：`Access-Control-Allow-Headers` 已声明 `X-Rocos-Control-Token, X-Rocos-Client-Id`，浏览器端可自由使用。
 
 ## 6. 新增 API
+
+### 会话心跳：`POST /api/control/heartbeat`
+
+持有者必须同时提供 token 和匹配的 client_id；身份校验、超时判定和续期在同一把控制权锁内完成。缺 token 返回 3006；无效、过期、缺失或错误 client_id 返回 3007。已过期的 token 不能通过心跳复活。调试旁路凭据不代表持有控制权，不能用来续期。
+
+成功返回 ControlOwnerData（不包含 token），包括 `ttl_seconds` 和 `heartbeat_interval_seconds`。默认 TTL 300 秒，推荐心跳每 5 秒一次；`--http_control_ttl_seconds=30` 可改为 30 秒。短 TTL 下建议心跳间隔不超过 TTL/3，以响应字段为准。
+
+viz 使用独立心跳：一次请求完成后再调度下一次，不重叠；请求超时会取消并重试。收到 3006/3007 后清除控制权，不自动重新申请或接管。断开时停止心跳并尝试释放；刷新页面用本标签页保存的凭据恢复心跳。凭据与连接状态保存在 sessionStorage，各标签页独立。
+
+普通 acquire 遇到有效持有者返回 3008；只有用户明确操作 takeover 才会替换持有者，旧 token 立即失效。心跳不改变机器人使能、运动模式或运动参数。控制权失效本身不停止运动。
+
+验证：`npm run test:control`（定时、身份、取消、超时、拒绝后的行为）和 `npm run build`。gRPC 控制目前不受 HTTP 控制权互斥约束。
+
 
 ### 6.1 `POST /api/control/acquire`
 
@@ -136,7 +149,7 @@ CORS：`Access-Control-Allow-Headers` 已声明 `X-Rocos-Control-Token, X-Rocos-
 | 码 | 含义 | 触发场景 |
 |---:|---|---|
 | `3006` | 无控制权（缺 token） | 未携带 `X-Rocos-Control-Token` 就调用写接口 |
-| `3007` | 控制权 token 无效或过期 | Token 不匹配当前 owner，或 300s 未续期，或来自同 IP 但不同连接 `remote_addr:remote_port` |
+| `3007` | 控制权 token 无效或过期 | Token 不匹配当前 owner，或 300s 未续期，或 client_id 缺失/不匹配 |
 | `3008` | 控制权已被他人持有 | Acquire 时已有非过期持有者 |
 
 ## 8. 接口权限矩阵
@@ -184,7 +197,7 @@ sequenceDiagram
     A->>S: POST /api/robot/movej (T1)
     S-->>A: 3007 control token invalid
 
-    Note over B: 60s 无活动
+    Note over B: 300s 无续期（可配置）
     B->>S: POST /api/robot/movej (T2)
     S-->>B: 3007 control token expired
 ```
@@ -192,23 +205,23 @@ sequenceDiagram
 ## 10. curl 示例
 
 ```bash
-# 1. 申请控制权
-TOKEN=$(curl -s -X POST http://localhost:8080/api/control/acquire \
+BASE=http://localhost:8080
+CLIENT_ID=curl-session-001
+REPLY=$(curl -sS -X POST "$BASE/api/control/acquire" \
   -H 'Content-Type: application/json' \
-  -d '{"client_name":"cli"}' | jq -r '.data.token')
-
-# 2. 使用 token 下发运动
-curl -s -X POST http://localhost:8080/api/robot/movej \
+  -d "{\"client_name\":\"cli\",\"client_id\":\"$CLIENT_ID\"}")
+TOKEN=$(printf '%s' "$REPLY" | jq -er 'select(.success == true and .code == 0) | .data.token')
+# 申请失败时不要继续。按响应建议的间隔（默认 5 秒）重复心跳：
+curl -sS -X POST "$BASE/api/control/heartbeat" \
   -H "X-Rocos-Control-Token: $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"joints":[0,0,0,0,0,0]}'
-
-# 3. 查看当前持有者（无需 token）
-curl -s http://localhost:8080/api/control/status | jq
-
-# 4. 释放
-curl -s -X POST http://localhost:8080/api/control/release \
-  -H "X-Rocos-Control-Token: $TOKEN"
+  -H "X-Rocos-Client-Id: $CLIENT_ID" \
+  -H 'Content-Type: application/json' -d '{}'
+# 查询不续期：
+curl -sS "$BASE/api/control/status"
+# 结束控制后停止心跳并释放：
+curl -sS -X POST "$BASE/api/control/release" \
+  -H "X-Rocos-Control-Token: $TOKEN" \
+  -H "X-Rocos-Client-Id: $CLIENT_ID"
 ```
 
 ## 11. 前端集成建议
@@ -225,7 +238,7 @@ function getOrCreateClientId(): string {
   return id;
 }
 
-// 应用启动或用户点击"接管机器人"按钮时：
+// 连接后普通申请控制权；显式接管按钮另调用 takeover：
 const clientId = getOrCreateClientId();
 const r = await fetch('/api/control/acquire', {
   method: 'POST',
@@ -260,15 +273,14 @@ async function post(url: string, body: unknown) {
   });
 }
 
-// 页面卸载时主动释放
-window.addEventListener('beforeunload', () => {
-  navigator.sendBeacon('/api/control/release', /* headers 需另处理 */);
-});
+// 用户主动断开：停止心跳后，带两个请求头调用 release。
+// sendBeacon 无法设置这里必需的自定义鉴权头，不用它来释放控制权。
+// 页面关闭、休眠或网络中断：由 TTL 回收未释放的控制权。
 ```
 
 ## 12. 兼容性与破坏性变更
 
-**升级后所有写接口必须同时携带 `X-Rocos-Control-Token` 和 `X-Rocos-Client-Id`**，两者缺一不可。旧客户端必须调整调用序列：`acquire → 存 token + client_id → 每次写调用带两个 header → 结束时 release`。
+**升级后所有写接口必须同时携带 `X-Rocos-Control-Token` 和 `X-Rocos-Client-Id`**，两者缺一不可。旧客户端必须调整调用序列：`acquire → 存 token + client_id → 独立心跳 + 写调用带两个 header → 停止心跳 → release`。
 
 `client_id` 由服务端在 `acquire` 响应中返回（若客户端未提供则自动生成）。**前端应使用 `sessionStorage` 存储 `client_id`**（标签页隔离），而非 `localStorage`（同源共享）。
 
@@ -285,5 +297,6 @@ window.addEventListener('beforeunload', () => {
 
 ---
 **变更日志**  
+- 2026-10-15：新增带双请求头鉴权的独立心跳，TTL 可配置；GET 不续期。viz 心跳、断开释放、标签页凭据隔离及过期/接管处理。
 - 2026-08-12：引入 `X-Rocos-Client-Id` 头校验，token 与 client_id 双重绑定，防止同源标签页通过共享 `localStorage` 窃取 token 绕过控制权检查。`checkAndRenewToken` 增加 client_id 匹配验证；`acquire`/`takeover` 自动生成 client_id 并在响应中返回。
 - 2026-08-11：初版，新增 `/api/control/{acquire,release,takeover,status}` 四条接口与业务码 `3006/3007/3008`。

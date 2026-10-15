@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface ConnectionState {
   host: string;
@@ -35,7 +35,12 @@ export const useConnectionStore = create<ConnectionState>()(
       controlOwnerName: null,
       controlOwnerIp: null,
 
-      setConnection: (host, port) => set({ host, port }),
+      setConnection: (host, port) => set((state) => ({
+        host, port,
+        ...(host !== state.host || port !== state.port
+          ? { controlToken: null, controlAcquiredAt: null, controlOwnerName: null, controlOwnerIp: null }
+          : {}),
+      })),
       setConnected: (connected) => set({ isConnected: connected }),
       setEnabled: (enabled) => set({ isRobotEnabled: enabled }),
       setControlToken: (token) => set({ controlToken: token }),
@@ -45,6 +50,8 @@ export const useConnectionStore = create<ConnectionState>()(
     }),
     {
       name: 'rocos-connection',
+      // Credentials and connection state belong to this tab, not all tabs.
+      storage: createJSONStorage(() => sessionStorage),
     },
   ),
 );

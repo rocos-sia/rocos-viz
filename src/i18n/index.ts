@@ -154,6 +154,7 @@ const DICT = {
 
   // ---- Control Rights ----
   'control.acquired': { en: 'Control acquired', zh: '已获取控制权' },
+  'control.lost': { en: 'Control expired or was taken over. Acquire control again to operate.', zh: '控制权已过期或被接管，请重新获取后操作。' },
   'control.notHeld': { en: 'No control right', zh: '未获取控制权' },
   'control.takeover': { en: 'Force takeover', zh: '强制夺权' },
   'control.takeoverTitle': { en: 'Force Takeover', zh: '强制夺权' },

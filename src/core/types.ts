@@ -137,6 +137,7 @@ export interface ControlOwnerData {
   idle_seconds?: number;
   expires_in_seconds?: number;
   ttl_seconds?: number;
+  heartbeat_interval_seconds?: number;
 }
 
 export interface ImpedanceData {
