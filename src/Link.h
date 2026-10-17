@@ -57,7 +57,7 @@ private:
 
     vtkSmartPointer<vtkSTLReader> reader; // 用于读取STL文件
 
-    double angle = 0.0;        //关节转动角度（rad）
+    double angle = 0.0;        // Joint position: radians for rotation, metres for translation
 
 public:
     enum
@@ -102,7 +102,7 @@ public:
     inline  void setRotate(double roll, double pitch, double yaw) {rotate << roll, pitch, yaw; }
     inline Eigen::Vector3d getRotate() {return rotate;}
 
-    inline void setAngleAxis(int x, int y, int z) {angleAxis << x, y, z;}
+    inline void setAngleAxis(double x, double y, double z) {angleAxis << x, y, z;}
     inline Eigen::Vector3d getAngleAxis() {return angleAxis;}
 
 

@@ -50,6 +50,12 @@ enum JointType
   FIXED = 6;
 }
 
+message JointMimic {
+  string joint = 1; // Source Link.name
+  optional double multiplier = 2; // Defaults to 1 when absent
+  double offset = 3; // Defaults to 0, in the target joint's units
+}
+
 message Link {
   string name = 1; // Link Name
   int32 order = 2; // Link Order
@@ -60,6 +66,9 @@ message Link {
   Vec3 translateLink = 7; // link origin xyz
   Vec3 rotateLink = 8; // link origin rpy
   string mesh = 9; // link mesh path
+  optional bool active = 10; // Defaults to true for moving, non-mimic joints
+  optional double position = 11; // Constant position for passive, non-mimic joints
+  JointMimic mimic = 12; // Passive linkage: q = multiplier * source_q + offset
 }
 
 message RobotModel {

@@ -1,10 +1,13 @@
+# 配置规范：docs/model-config.md（长度 m，角度 rad）
 robot:
   - name: link_0
     order: 0
+    type: fixed
     mesh: base_link.stl
 
   - name: link_1
     order: 1
+    type: revolute
     translate: [0.0, 0.0, 0.375]
     rotate: [0, 0, 0]
     angleAxis: [0, 0, 1]
@@ -14,6 +17,7 @@ robot:
 
   - name: link_2
     order: 2
+    type: revolute
     translate: [0.0, 0.0, 0.0]
     rotate: [0, 0, 0]
     angleAxis: [0, 1, 0]
@@ -23,6 +27,7 @@ robot:
 
   - name: link_3
     order: 3
+    type: revolute
     translate: [0.0, 0.02, 0.40]
     rotate: [0, 0, 0]
     angleAxis: [0, 1, 0]
@@ -32,6 +37,7 @@ robot:
 
   - name: link_4
     order: 4
+    type: revolute
     translate: [0.0, 0.0, 0.0]
     rotate: [0, 0, 0]
     angleAxis: [0, 0, 1]
@@ -41,6 +47,7 @@ robot:
 
   - name: link_5
     order: 5
+    type: revolute
     translate: [0.0, 0.0, 0.45]
     rotate: [0, 0, 0]
     angleAxis: [0, 1, 0]
@@ -50,6 +57,7 @@ robot:
 
   - name: link_6
     order: 6
+    type: revolute
     translate: [0.0, 0.0, 0.07]
     rotate: [0, 0, 0]
     angleAxis: [0, 0, 1]

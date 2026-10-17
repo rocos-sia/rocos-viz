@@ -271,6 +271,11 @@ vtk_module_autoinit(
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(model_test test/model_test.cpp src/Model.cpp src/Link.cpp)
+    target_link_libraries(model_test PRIVATE ${VTK_LIBRARIES} Eigen3::Eigen yaml-cpp)
+    vtk_module_autoinit(TARGETS model_test MODULES ${VTK_LIBRARIES})
+    add_test(NAME model_test COMMAND model_test
+        "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/model-test.yaml")
     find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Test QUIET)
     if(TARGET Qt${QT_VERSION_MAJOR}::Test)
         add_executable(jog_button_test

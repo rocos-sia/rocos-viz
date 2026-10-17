@@ -45,6 +45,7 @@ void Link::init()
 {
     translate << 0, 0, 0;
     rotate << 0, 0, 0;
+    angleAxis << 0, 0, 1;
     translateLink << 0, 0, 0;
     rotateLink << 0, 0, 0;
 

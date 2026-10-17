@@ -52,13 +52,13 @@ public:
 //    void addLink(Link link, int order);
 
     /**
-     * @brief Get the number of links
+     * @brief Get the number of active joints (at most seven)
      *
      * @return int
      */
     inline int getFreedom() const { return _freedom; }
 
-    void updateModel(std::vector<double> &jointRads);
+    void updateModel(const std::vector<double> &jointPositions);
 
     void addToRenderer(vtkRenderer* renderer);
 
@@ -75,7 +75,14 @@ public:
 private:
     /* data */
     std::vector<Link> _linkGrp; //Save all the links of manipulator
-//    std::vector<double> _jntRads; // Save the joint state (radians)
+    struct JointInput {
+        int stateIndex = -1; // Fixed, passive and mimic joints consume no input
+        int mimicIndex = -1;
+        double multiplier = 1.0;
+        double offset = 0.0;
+    };
+    std::vector<JointInput> _jointInputs;
+    std::vector<size_t> _mimicOrder; // Sources before dependents
     int _freedom = 0;
 
     vtkRenderer* _renderer = nullptr;

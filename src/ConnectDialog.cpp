@@ -6,6 +6,7 @@
 #include <Protocol.h> //通讯协议
 #include <fstream>
 #include <filesystem>
+#include <iomanip>
 
 const int POLLING_INTERVAL_MS = 20; // 轮询间隔 100ms
 
@@ -357,6 +358,7 @@ void ConnectDialog::getRobotModel()
         }
 
         cfgYamlFile.clear(); // clear file content
+        cfgYamlFile << std::setprecision(17);
         cfgYamlFile << "robot: " << std::endl;
 
         // 创建映射表
@@ -366,12 +368,25 @@ void ConnectDialog::getRobotModel()
         enumMap[rocos::JointType::REVOLUTE] = "revolute";
         enumMap[rocos::JointType::PRISMATIC] = "prismatic";
         enumMap[rocos::JointType::CONTINUOUS] = "continuous";
+        enumMap[rocos::JointType::FLOATING] = "floating";
+        enumMap[rocos::JointType::PLANAR] = "planar";
 
         for(int i = 0; i < response.links_size(); i++) {
             cfgYamlFile << "  - name: " << response.links(i).name() << std::endl;
             cfgYamlFile << "    order: " << response.links(i).order() << std::endl;
 
             cfgYamlFile << "    type: " << enumMap[response.links(i).type()] << std::endl;
+            const auto& link = response.links(i);
+            if (link.has_active())
+                cfgYamlFile << "    active: " << (link.active() ? "true" : "false") << std::endl;
+            if (link.has_position())
+                cfgYamlFile << "    position: " << link.position() << std::endl;
+            if (link.has_mimic()) {
+                cfgYamlFile << "    mimic:" << std::endl;
+                cfgYamlFile << "      joint: " << std::quoted(link.mimic().joint()) << std::endl;
+                cfgYamlFile << "      multiplier: " << (link.mimic().has_multiplier() ? link.mimic().multiplier() : 1.0) << std::endl;
+                cfgYamlFile << "      offset: " << link.mimic().offset() << std::endl;
+            }
 
             cfgYamlFile << "    translate: [" << response.links(i).translate().x() << ", "
                       << response.links(i).translate().y() << ", "

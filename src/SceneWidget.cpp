@@ -26,6 +26,7 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #include <QFile>
 #include <QTimer>
+#include <QMessageBox>
 
 
 #define LANDAU_LOGO "landau.png"
@@ -277,8 +278,13 @@ void SceneWidget::setAxoView()
 }
 
 void SceneWidget::displayModelFromYaml(const std::string& yaml_file) {
-    yamlCfgFile = yaml_file;
-    model->getModelFromYamlFile(yamlCfgFile);
+    try {
+        model->getModelFromYamlFile(yaml_file);
+        yamlCfgFile = yaml_file;
+    } catch (const std::exception& error) {
+        QMessageBox::warning(this, tr("Model configuration error"), QString::fromUtf8(error.what()));
+        return;
+    }
     renderWindow->Render();
 
 }
