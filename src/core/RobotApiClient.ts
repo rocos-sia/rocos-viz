@@ -6,6 +6,7 @@ import type {
   MotionResponse,
   TaskStatus,
   EnabledResponse,
+  ScriptListData,
   ControlOwnerData,
   ImpedanceData,
   SetImpedanceBody,
@@ -474,6 +475,36 @@ export class RobotApiClient {
   }
 
   // ─── Lua Script ───────────────────────────────────────────────
+
+  /** GET /api/script/list — 列出控制器 scripts 目录下的脚本相对路径 */
+  async listScripts(): Promise<ScriptListData> {
+    return this.request<ScriptListData>('GET', '/api/script/list');
+  }
+
+  /** GET /api/script/download — 下载原始 Lua 源码，无需控制权 */
+  async downloadScript(filename: string): Promise<string> {
+    const url = new URL('/api/script/download', this.baseUrl);
+    url.searchParams.set('filename', filename);
+
+    const response = await fetch(url.toString(), {
+      headers: { Accept: 'text/plain' },
+    });
+    const source = await response.text();
+
+    // A business error can still arrive as JSON with HTTP 200. Never treat an
+    // error envelope as Lua source, or parse successful text as a JSON envelope.
+    if (response.headers.get('Content-Type')?.toLowerCase().includes('application/json')) {
+      const json: ApiResponse = JSON.parse(source);
+      if (!json.success) {
+        throw new Error(`API Error: ${json.message} (code: ${json.code})`);
+      }
+      throw new Error('Script download expected Lua source, received JSON');
+    }
+    if (!response.ok) {
+      throw new Error(`Script download failed: HTTP ${response.status}`);
+    }
+    return source;
+  }
 
   /** POST /api/script/upload — 上传脚本（上传后需调用 runScript() 执行） */
   async uploadScript(filename: string, source: string): Promise<void> {

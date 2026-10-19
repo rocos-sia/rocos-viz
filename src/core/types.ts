@@ -121,6 +121,10 @@ export interface EnabledResponse {
   robot_state: string;
 }
 
+export interface ScriptListData {
+  scripts: string[];
+}
+
 export interface ControlOwnerData {
   token?: string;
   has_owner: boolean;

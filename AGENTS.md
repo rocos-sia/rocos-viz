@@ -19,6 +19,7 @@ ROCOS-Viz is a React 18, TypeScript, and Vite application for robot visualizatio
 - `npm run build`: run TypeScript checking and build production assets into `dist/`.
 - `npm run preview`: preview the production build locally.
 - `npm run test:control`: run control-heartbeat and API credential regression tests.
+- `npm run test:script`: run script-list and source-download protocol tests.
 - `npx eslint src`: run the configured ESLint rules; no `lint` script exists.
 
 ## Coding Style & Naming Conventions
@@ -27,7 +28,7 @@ Follow surrounding TypeScript style: two-space indentation, single quotes, semic
 
 ## Testing Guidelines
 
-Tests use Node's built-in `node:test` and strict assertions, with files named `test/*.test.mjs`. The current suite compiles selected TypeScript modules before testing. Add regression cases for changed control behavior, especially credential handling, retries, cancellation, and cleanup. No coverage threshold is configured. Run the control suite and build before submitting code changes; manually verify affected UI flows and both languages.
+Tests use Node's built-in `node:test` and strict assertions, with files named `test/*.test.mjs`. The current suites compile selected TypeScript modules before testing. Add regression cases for changed control behavior, especially credential handling, retries, cancellation, and cleanup. No coverage threshold is configured. Run both test suites and build before submitting code changes; manually verify affected UI flows and both languages.
 
 ## Commit & Pull Request Guidelines
 

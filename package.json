@@ -1,13 +1,14 @@
 {
   "name": "rocos-web",
   "private": true,
-  "version": "3.0.0-rc.1",
+  "version": "3.0.0-rc.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:control": "node --test test/control-heartbeat.test.mjs"
+    "test:control": "node --test test/control-heartbeat.test.mjs",
+    "test:script": "node --test test/script-api.test.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",

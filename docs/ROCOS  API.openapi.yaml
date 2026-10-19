@@ -1509,6 +1509,46 @@ paths:
                 $ref: '#/components/schemas/ScriptResponse'
           headers: {}
       security: []
+  /api/script/list:
+    get:
+      summary: 列出 scripts 目录下可用的 Lua 脚本
+      deprecated: false
+      description: 返回脚本相对路径列表，供客户端下载前枚举
+      tags:
+        - Lua 脚本
+      parameters: []
+      responses:
+        '200':
+          description: 脚本列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScriptListResponse'
+          headers: {}
+      security: []
+  /api/script/download:
+    get:
+      summary: 下载单个 Lua 脚本源码
+      deprecated: false
+      description: 按相对路径下载 scripts 目录下的脚本，成功返回原始 Lua 源码
+      tags:
+        - Lua 脚本
+      parameters:
+        - name: filename
+          in: query
+          description: scripts 目录下的相对路径，如 example.lua
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lua 脚本源码文本
+          content:
+            text/plain:
+              schema:
+                type: string
+          headers: {}
+      security: []
   /api/script/breakpoint/add:
     post:
       summary: 添加断点
@@ -1581,7 +1621,7 @@ paths:
   /api/control/heartbeat:
     post:
       summary: 持有者会话心跳
-      description: 校验 token、client_id 和有效期，成功后续期。默认建议每 5 秒发送；以响应 heartbeat_interval_seconds 为准。旧 token 过期或被接管后不可通过心跳恢复。此接口不改变机器人运动状态。
+      description: 校验 token、client_id 和有效期，成功后续期。默认建议每 5 秒发送；以响应 heartbeat_interval_seconds 为准。旧 token 过期或被接管后不可通过心跳恢复。调试旁路凭据不能用于心跳。此接口不改变机器人运动状态。
       tags:
       - 控制权 (Control)
       parameters: []
@@ -2044,6 +2084,22 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/ScriptStatusData'
+    ScriptListData:
+      type: object
+      required:
+        - scripts
+      properties:
+        scripts:
+          type: array
+          items:
+            type: string
+    ScriptListResponse:
+      allOf:
+        - $ref: '#/components/schemas/StandardResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ScriptListData'
     ControlOwnerData:
       type: object
       properties:
@@ -2079,7 +2135,8 @@ components:
           description: 距离 TTL 到期的剩余秒数
         ttl_seconds:
           type: integer
-          description: 控制权超时秒数，默认 300，可配置；通过鉴权的写请求与心跳续期
+          minimum: 1
+          description: 控制权超时秒数，默认 300，http_control_ttl_seconds 必须为正整数；通过鉴权的写请求与心跳续期
         heartbeat_interval_seconds:
           type: number
           description: 建议心跳间隔，默认 5 秒；短 TTL 时不超过 TTL/3
