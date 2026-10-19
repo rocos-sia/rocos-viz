@@ -113,7 +113,7 @@ public/         字体与图标
 server/         简易 Python 测试服务和示例模型
 test/           协议与控制权回归测试
 docs/           API 协议和说明
-skills/         项目版本维护技能
+.agents/skills/ 项目技能（版本维护、UI/UX Pro Max）
 ```
 
 前端使用 React 18、TypeScript、Vite、Ant Design、Zustand、Three.js / React Three Fiber 和 ECharts。
@@ -129,6 +129,6 @@ skills/         项目版本维护技能
 
 - [OpenAPI 协议](<docs/ROCOS  API.openapi.yaml>)：对照前后端接口定义。
 - [贡献指南](AGENTS.md)：目录约定、代码风格与验证要求。
-- [版本维护技能](skills/project-versioning/SKILL.md)：提交前确认更新类型；内部测试递增 `rc.N`，确认 patch 发布时递增补丁号并移除 rc 后缀。
+- [版本维护技能](.agents/skills/project-versioning/SKILL.md)：提交前确认更新类型；内部测试递增 `rc.N`，确认 patch 发布时递增补丁号并移除 rc 后缀。
 
 提交问题时，请附上前端版本、控制器版本、连接方式、复现步骤及相关浏览器日志。
