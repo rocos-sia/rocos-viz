@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { version as appVersion } from '../../../package.json';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useUIStore, RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH } from '@/stores/uiStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
@@ -693,7 +694,7 @@ export function AppLayout() {
       >
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <h2 style={{ color: '#3b82f6', marginBottom: 8 }}>ROCOS-Viz Web</h2>
-          <p style={{ color: 'var(--color-text-secondary)' }}>Version 0.1.0</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Version {appVersion}</p>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 8 }}>
             React + Three.js + ECharts
           </p>
