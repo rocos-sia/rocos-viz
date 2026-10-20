@@ -1,4 +1,5 @@
 import ReactECharts from 'echarts-for-react';
+import 'echarts/theme/v5';
 import { ChartConfig } from '@/stores/plotStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useT } from '@/i18n/useT';
@@ -75,6 +76,7 @@ export function RealtimeChart({ config, data, onClick }: RealtimeChartProps) {
       style={{ width: '100%', height: '100%', cursor: onClick ? 'pointer' : 'default' }}
     >
       <ReactECharts
+        theme="v5"
         option={option}
         style={{ width: '100%', height: '100%' }}
         opts={{ renderer: 'canvas' }}

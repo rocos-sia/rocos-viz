@@ -27,7 +27,7 @@ ROCOS 机器人可视化与控制 Web 前端。通过浏览器查看机械臂三
 
 ### 环境准备
 
-- Node.js 与 npm：已使用 **Node.js 20.20.2 / npm 10.8.2** 完成测试和生产构建。
+- Node.js：需要 **20.19+（20.x）或 22.12+**；已使用 **Node.js 24.22.0 / npm 11.19.1** 完成安装、测试和生产构建。
 - 支持 WebGL 的桌面浏览器，并开启硬件加速。
 - 可访问的 ROCOS 控制器；没有控制器时，可使用下方测试服务查看模型和模拟状态。
 
@@ -41,6 +41,13 @@ npm run dev
 ```
 
 默认打开 `http://localhost:5173`。Vite 默认将 `/api` 和 `/ws` 请求代理到本机 `127.0.0.1:8080`。
+
+### 安装提示
+
+- `packages are looking for funding` 是依赖的赞助提示，不影响运行。
+- `whatwg-encoding@3.1.1 deprecated` 来自 `blockly → jsdom` 的间接依赖，表示该包已弃用，不代表安装失败。当前保留 Blockly 12 的兼容性，等待上游依赖迁移；不要直接将它强制替换为 API 不同的 `@exodus/bytes`。
+- 新版 npm 默认拦截尚未授权的依赖安装脚本。本项目通过 `package.json` 的 `allowScripts` 按版本授权 esbuild 的二进制安装校验脚本。以后升级 esbuild 如再次出现提示，先运行 `npm install-scripts ls` 检查，审阅后执行 `npm install-scripts approve esbuild`，再运行 `npm rebuild esbuild`；授权命令本身不会执行安装脚本。旧版 npm 不支持这些命令，无需执行。详见 [npm 安装脚本授权说明](https://docs.npmjs.com/cli/v11/commands/npm-install-scripts/)。
+- 出现漏洞提示时先运行 `npm audit` 查看来源。依赖修复后需同步提交 `package.json` 和 `package-lock.json` 并运行测试、构建；不要直接运行 `npm audit fix --force`，它可能引入不兼容的主版本升级。
 
 ### 连接机器人后端
 

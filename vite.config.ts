@@ -14,6 +14,8 @@ export default defineConfig({
     },
   },
   build: {
+    // Preserve Vite 5's browser targets when upgrading the build tool.
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
