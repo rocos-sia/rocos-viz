@@ -21,8 +21,9 @@ export function useDisplayRobot() {
   };
 }
 
-export function JointReadout() {
-  const { joints } = useDisplayRobot();
+export function JointReadout({ values }: { values?: number[] } = {}) {
+  const robot = useDisplayRobot();
+  const joints = values ?? robot.joints;
   const t = useT();
   return <div className="teach-joint-readout">
     <div className="teach-table-heading"><span>{t('teach.joint')}</span><span>{t('teach.position')}</span></div>

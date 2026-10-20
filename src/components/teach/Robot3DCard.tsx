@@ -83,11 +83,11 @@ export function Robot3DCard({ urdfContent }: { urdfContent: string | null }) {
   }, []);
   return <TeachCard className={`teach-3d ${expanded ? 'teach-3d-expanded' : ''}`} title={t('teach.scene')}
     extra={<>{!connected && <DemoBadge />}<Button aria-label={t('teach.expand')} icon={expanded ? <ShrinkOutlined /> : <ExpandOutlined />} onClick={() => setExpanded(!expanded)} /></>}>
+    <div className="teach-scene-canvas">
     <div className="teach-scene-toolbar">
       <Segmented options={[{ label: t('view.axonometric'), value: 'axonometric' }, { label: t('view.top'), value: 'top' }, { label: t('view.front'), value: 'front' }, { label: t('view.right'), value: 'right' }]}
         onChange={(value) => setCameraPreset(value as 'axonometric' | 'top' | 'front' | 'right')} />
     </div>
-    <div className="teach-scene-canvas">
       <SceneErrorBoundary>
         <RobotViewer>
           <AxesIndicator />
@@ -97,7 +97,7 @@ export function Robot3DCard({ urdfContent }: { urdfContent: string | null }) {
       </SceneErrorBoundary>
       {connected && !urdfContent && <div className="teach-scene-note">{t('teach.loadingModel')}</div>}
       <ResetButton />
+      <SceneToggles />
     </div>
-    <SceneToggles />
   </TeachCard>;
 }

@@ -10,10 +10,14 @@ test('offline routes and preview actions never issue controller requests', async
   await expect(page.locator('.teach-controlbar').getByRole('button', { name: '运动停止' })).toBeDisabled();
   await page.locator('.teach-sidebar').getByRole('link', { name: '手动示教' }).click();
   await page.getByRole('button', { name: 'J1 +', exact: true }).click();
-  await expect(page.locator('.teach-preview-jog').first()).toContainText('1.00');
+  await expect(page.locator('.teach-state-column .teach-joint-row').first()).toContainText('1.00');
+  await expect(page.getByRole('heading', { name: '运动控制', exact: true })).toBeVisible();
+  await expect(page.locator('.teach-jog-card .teach-preview-joint')).toBeVisible();
+  await expect(page.locator('.teach-jog-card .teach-preview-cartesian')).toBeVisible();
+  await expect(page.locator('.teach-jog-card .teach-preview-null')).toBeVisible();
   await page.getByRole('button', { name: '记录当前点' }).click();
   await expect(page.getByRole('tab', { name: '示教点 (4)' })).toBeVisible();
-  await page.getByRole('tab', { name: '精确运动' }).click();
+  await page.getByRole('tab', { name: '精确控制' }).click();
   await expect(page.locator('.teach-control-fieldset button').first()).toBeDisabled();
   await page.locator('.teach-sidebar').getByRole('link', { name: '程序编程' }).click();
   await page.getByRole('tab', { name: /图形化编辑/ }).click();

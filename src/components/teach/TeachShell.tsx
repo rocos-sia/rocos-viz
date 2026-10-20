@@ -41,14 +41,14 @@ function StatusStrip() {
   const mode = useRobotStateStore((s) => s.robotState?.work_mode);
   const speed = useControlStore((s) => s.speedFactor);
   return <div className="teach-status-strip">
-    <span className="teach-device-name"><RobotOutlined /> {connected ? host : 'ROCOS'}</span>
-    <span className={connected ? 'connected' : ''}><i />{t(connected ? 'conn.connected' : 'conn.disconnected')}</span>
-    <span>{t('teach.ownership')}: {token ? t('teach.local') : owner ?? t('teach.none')}</span>
-    <span>{t(enabled && connected ? 'status.enabled' : 'status.disabled')}</span>
-    <span>{t('teach.mode')}: {connected ? mode ?? t('teach.unknown') : '—'}</span>
-    <span>{t('teach.safetyUnknown')}</span>
-    <span>{t('teach.speed')}: {(speed * 100).toFixed(0)}%</span>
-    <span>{t('teach.alarmUnknown')}</span>
+    <div className="teach-status-cell"><small>{t('teach.device')}</small><strong className="teach-device-name"><RobotOutlined /> {connected ? host : 'ROCOS'}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.connectionState')}</small><strong className={connected ? 'connected' : ''}><i />{t(connected ? 'conn.connected' : 'conn.disconnected')}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.enableState')}</small><strong className={enabled && connected ? 'connected' : ''}><i />{t(enabled && connected ? 'status.enabled' : 'status.disabled')}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.ownership')}</small><strong>{token ? t('teach.local') : owner ?? t('teach.none')}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.mode')}</small><strong>{connected ? mode ?? t('teach.unknown') : '—'}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.safety')}</small><strong>{t('teach.unknown')}</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.speed')}</small><strong>{(speed * 100).toFixed(0)}%</strong></div>
+    <div className="teach-status-cell"><small>{t('teach.alarms')}</small><strong>{t('teach.unknown')}</strong></div>
   </div>;
 }
 
