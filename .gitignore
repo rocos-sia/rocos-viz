@@ -40,3 +40,7 @@ __pycache__/
 qtcreator-*
 *.pcd
 /build
+
+# Browser test artifacts
+test-results/
+playwright-report/

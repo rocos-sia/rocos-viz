@@ -1,34 +1,34 @@
-/* Alibaba PuHuiTi 3.0 — served locally from public/fonts/ */
+/* AlibabaPuHuiTi — served locally from public/fonts/ */
 @font-face {
-  font-family: 'Alibaba PuHuiTi 3.0';
+  font-family: 'AlibabaPuHuiTi';
   font-weight: 300;
   font-style: normal;
   font-display: swap;
   src: url('/fonts/AlibabaPuHuiTi-3-45-Light.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'Alibaba PuHuiTi 3.0';
+  font-family: 'AlibabaPuHuiTi';
   font-weight: 400;
   font-style: normal;
   font-display: swap;
   src: url('/fonts/AlibabaPuHuiTi-3-55-Regular.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'Alibaba PuHuiTi 3.0';
+  font-family: 'AlibabaPuHuiTi';
   font-weight: 500;
   font-style: normal;
   font-display: swap;
   src: url('/fonts/AlibabaPuHuiTi-3-65-Medium.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'Alibaba PuHuiTi 3.0';
+  font-family: 'AlibabaPuHuiTi';
   font-weight: 600;
   font-style: normal;
   font-display: swap;
   src: url('/fonts/AlibabaPuHuiTi-3-75-SemiBold.ttf') format('truetype');
 }
 @font-face {
-  font-family: 'Alibaba PuHuiTi 3.0';
+  font-family: 'AlibabaPuHuiTi';
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -108,7 +108,7 @@ html, body, #root {
   overflow: hidden;
   background: var(--color-bg-base);
   color: var(--color-text);
-  font-family: 'Alibaba PuHuiTi 3.0', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'AlibabaPuHuiTi';
   /* Kill the 300ms tap delay and double-tap zoom; elements that need pan/drag
      opt back in with their own touch-action. */
   touch-action: manipulation;
@@ -317,7 +317,7 @@ html, body, #root {
   margin-top: 4px;
   padding: 8px 12px;
   font-size: 12px;
-  font-family: monospace;
+  font-family: AlibabaPuHuiTi;
   color: var(--color-text-secondary);
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);

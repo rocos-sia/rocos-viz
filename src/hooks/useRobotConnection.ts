@@ -7,6 +7,9 @@ import { POLLING_INTERVAL_MS, MAX_STATE_FAILURES } from '@/core/constants';
 import type { RobotState } from '@/core/types';
 
 export function useRobotConnection() {
+  const generation = useRef(0);
+  const host = useConnectionStore((s) => s.host);
+  const port = useConnectionStore((s) => s.port);
   const timerRef = useRef<number | null>(null);
   const failureCountRef = useRef(0);
   const wsRef = useRef<RobotWebSocket | null>(null);
@@ -32,15 +35,21 @@ export function useRobotConnection() {
   const startPolling = useCallback(() => {
     if (timerRef.current) return;
 
+    const epoch = generation.current;
+    let inFlight = false;
     const poll = async () => {
+      if (inFlight || epoch !== generation.current) return;
+      inFlight = true;
       const { host, port } = useConnectionStore.getState();
       const client = new RobotApiClient(host, port);
 
       try {
         const state = await client.getRobotState();
+        if (epoch !== generation.current) return;
         syncState(state);
         failureCountRef.current = 0;
-      } catch (error) {
+      } catch {
+        if (epoch !== generation.current) return;
         failureCountRef.current++;
         if (failureCountRef.current >= MAX_STATE_FAILURES) {
           console.error('Max state failures reached, disconnecting');
@@ -49,7 +58,7 @@ export function useRobotConnection() {
           setEnabled(false);
           clearState();
         }
-      }
+      } finally { inFlight = false; }
     };
 
     timerRef.current = window.setInterval(poll, POLLING_INTERVAL_MS);
@@ -66,12 +75,14 @@ export function useRobotConnection() {
   const startWebSocket = useCallback(() => {
     if (wsRef.current?.connected) return;
 
+    const epoch = generation.current;
     const ws = new RobotWebSocket();
     wsRef.current = ws;
 
     const { host, port } = useConnectionStore.getState();
 
-    ws.connect(host, parseInt(port), syncState, (status) => {
+    ws.connect(host, parseInt(port), (state) => { if (epoch === generation.current) syncState(state); }, (status) => {
+      if (epoch !== generation.current) return;
       if (status === 'disconnected' && !fallbackRef.current) {
         fallbackRef.current = true;
         console.warn('WebSocket disconnected, falling back to HTTP polling');
@@ -80,7 +91,7 @@ export function useRobotConnection() {
     });
 
     const fallbackTimeout = setTimeout(() => {
-      if (!ws.connected && !fallbackRef.current) {
+      if (epoch === generation.current && !ws.connected && !fallbackRef.current) {
         fallbackRef.current = true;
         console.warn('WebSocket connection timed out, falling back to HTTP polling');
         ws.disconnect();
@@ -92,9 +103,11 @@ export function useRobotConnection() {
   }, [syncState, startPolling]);
 
   useEffect(() => {
+    generation.current++;
+    let clearFallback: (() => void) | undefined;
     if (isConnected) {
       fallbackRef.current = false;
-      startWebSocket();
+      clearFallback = startWebSocket();
     } else {
       wsRef.current?.disconnect();
       wsRef.current = null;
@@ -102,11 +115,13 @@ export function useRobotConnection() {
     }
 
     return () => {
+      generation.current++;
+      clearFallback?.();
       wsRef.current?.disconnect();
       wsRef.current = null;
       stopPolling();
     };
-  }, [isConnected, startWebSocket, stopPolling]);
+  }, [isConnected, host, port, startWebSocket, stopPolling]);
 
   return { startPolling, stopPolling };
 }

@@ -1,13 +1,11 @@
-import { useCallback, useRef } from 'react';
+import { useHeldJog } from '@/hooks/useHeldJog';
+import { useCallback } from 'react';
 import { Button } from 'antd';
 import { useRobotStateStore } from '@/stores/robotStateStore';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useControlStore } from '@/stores/controlStore';
-import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
 import {
   JOG_COMMAND_TIMEOUT_S,
-  JOG_FEED_INTERVAL_MS,
   jointMotionParams,
 } from '@/core/constants';
 
@@ -20,7 +18,6 @@ import {
 export function NullSpacePanel() {
   const t = useT();
   const robotState = useRobotStateStore((s) => s.robotState);
-  const { host, port } = useConnectionStore.getState();
 
   const dof = robotState?.joint_states?.length ?? 0;
   const nullDims = Math.max(0, dof - 6);
@@ -44,8 +41,6 @@ export function NullSpacePanel() {
             label={dim.label}
             dimIndex={dim.index}
             nullDims={nullDims}
-            host={host}
-            port={port}
           />
         ))}
       </div>
@@ -57,13 +52,9 @@ interface NullSpaceJogItemProps {
   label: string;
   dimIndex: number;
   nullDims: number;
-  host: string;
-  port: string;
 }
 
-function NullSpaceJogItem({ label, dimIndex, nullDims, host, port }: NullSpaceJogItemProps) {
-  const clientRef = useRef<RobotApiClient | null>(null);
-  const timerRef = useRef<number | null>(null);
+function NullSpaceJogItem({ label, dimIndex, nullDims }: NullSpaceJogItemProps) {
 
   /** 构建 SVD 维度速度向量（长度 = nullDims），仅在目标维度处为非零 */
   const buildDimSpeeds = useCallback((sign: number): number[] => {
@@ -72,40 +63,7 @@ function NullSpaceJogItem({ label, dimIndex, nullDims, host, port }: NullSpaceJo
     return dimSpeeds;
   }, [dimIndex, nullDims]);
 
-  const startJogLoop = useCallback((direction: 'POSITIVE' | 'NEGATIVE') => {
-    if (timerRef.current !== null) return;
-
-    const client = new RobotApiClient(host, port);
-    clientRef.current = client;
-
-    const dimSpeeds = buildDimSpeeds(direction === 'POSITIVE' ? 1 : -1);
-    const feedJog = () => client.jogSvd(dimSpeeds, JOG_COMMAND_TIMEOUT_S);
-
-    feedJog().catch((error) => {
-      console.error('SVD jog start failed:', error);
-    });
-
-    timerRef.current = window.setInterval(() => {
-      if (!clientRef.current) return;
-      feedJog().catch((error) => {
-        console.error('SVD jog repeat failed:', error);
-      });
-    }, JOG_FEED_INTERVAL_MS);
-  }, [buildDimSpeeds, host, port]);
-
-  const handleStopJog = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (clientRef.current) {
-      clientRef.current.jogStop().catch((error) => {
-        console.error('SVD jog stop failed:', error);
-      });
-      clientRef.current = null;
-    }
-  }, []);
+  const { bind } = useHeldJog((client, sign) => client.jogSvd(buildDimSpeeds(sign), JOG_COMMAND_TIMEOUT_S));
 
   return (
     <div className="jog-item">
@@ -113,11 +71,7 @@ function NullSpaceJogItem({ label, dimIndex, nullDims, host, port }: NullSpaceJo
 
       <Button
         className="jog-btn"
-        onMouseDown={(e) => { e.preventDefault(); startJogLoop('NEGATIVE'); }}
-        onMouseUp={handleStopJog}
-        onMouseLeave={handleStopJog}
-        onTouchStart={(e) => { e.preventDefault(); startJogLoop('NEGATIVE'); }}
-        onTouchEnd={handleStopJog}
+          {...bind(-1)}
       >
         −
       </Button>
@@ -126,11 +80,7 @@ function NullSpaceJogItem({ label, dimIndex, nullDims, host, port }: NullSpaceJo
 
       <Button
         className="jog-btn"
-        onMouseDown={(e) => { e.preventDefault(); startJogLoop('POSITIVE'); }}
-        onMouseUp={handleStopJog}
-        onMouseLeave={handleStopJog}
-        onTouchStart={(e) => { e.preventDefault(); startJogLoop('POSITIVE'); }}
-        onTouchEnd={handleStopJog}
+          {...bind(1)}
       >
         +
       </Button>

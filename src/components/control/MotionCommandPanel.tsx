@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button, InputNumber, message } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
+import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useControlStore } from '@/stores/controlStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { jointMotionParams, cartesianMotionParams } from '@/core/constants';
@@ -16,8 +17,11 @@ export function MotionCommandPanel() {
   const isConnected = useConnectionStore((s) => s.isConnected);
   const { host, port } = useConnectionStore.getState();
 
+  const jointCount = useRobotStateStore((s) => s.robotState?.joint_states.length ?? 7);
   const [cartesian, setCartesian] = useState({ x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 });
   const [joints, setJoints] = useState([0, 0, 0, 0, 0, 0, 0]);
+
+  useEffect(() => { setJoints((values) => Array.from({ length: jointCount }, (_, i) => values[i] ?? 0)); }, [jointCount]);
 
   const handleMoveJ_IK = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
@@ -25,9 +29,9 @@ export function MotionCommandPanel() {
     const x = cartesian.x / (isMM ? 1000 : 1);
     const y = cartesian.y / (isMM ? 1000 : 1);
     const z = cartesian.z / (isMM ? 1000 : 1);
-    const roll = (cartesian.roll * Math.PI) / (isDegree ? 180 : 1);
-    const pitch = (cartesian.pitch * Math.PI) / (isDegree ? 180 : 1);
-    const yaw = (cartesian.yaw * Math.PI) / (isDegree ? 180 : 1);
+    const roll = cartesian.roll * (isDegree ? Math.PI / 180 : 1);
+    const pitch = cartesian.pitch * (isDegree ? Math.PI / 180 : 1);
+    const yaw = cartesian.yaw * (isDegree ? Math.PI / 180 : 1);
 
     const euler = new THREE.Euler(roll, pitch, yaw, 'ZYX');
     const q = new THREE.Quaternion().setFromEuler(euler);
@@ -52,9 +56,9 @@ export function MotionCommandPanel() {
     const x = cartesian.x / (isMM ? 1000 : 1);
     const y = cartesian.y / (isMM ? 1000 : 1);
     const z = cartesian.z / (isMM ? 1000 : 1);
-    const roll = (cartesian.roll * Math.PI) / (isDegree ? 180 : 1);
-    const pitch = (cartesian.pitch * Math.PI) / (isDegree ? 180 : 1);
-    const yaw = (cartesian.yaw * Math.PI) / (isDegree ? 180 : 1);
+    const roll = cartesian.roll * (isDegree ? Math.PI / 180 : 1);
+    const pitch = cartesian.pitch * (isDegree ? Math.PI / 180 : 1);
+    const yaw = cartesian.yaw * (isDegree ? Math.PI / 180 : 1);
 
     const euler = new THREE.Euler(roll, pitch, yaw, 'ZYX');
     const q = new THREE.Quaternion().setFromEuler(euler);
@@ -76,7 +80,7 @@ export function MotionCommandPanel() {
   const handleMoveJ = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const rads = joints.map((j) => (j * Math.PI) / (isDegree ? 180 : 1));
+    const rads = joints.map((j) => j * (isDegree ? Math.PI / 180 : 1));
 
     try {
       const client = new RobotApiClient(host, port);
@@ -91,7 +95,7 @@ export function MotionCommandPanel() {
   const handleMoveL_FK = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const rads = joints.map((j) => (j * Math.PI) / (isDegree ? 180 : 1));
+    const rads = joints.map((j) => j * (isDegree ? Math.PI / 180 : 1));
 
     try {
       const client = new RobotApiClient(host, port);

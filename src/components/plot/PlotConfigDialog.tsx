@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Modal, Tree, Space, InputNumber } from 'antd';
 import { usePlotStore, ChartConfig, DataSourceKey } from '@/stores/plotStore';
+import { useRobotStateStore } from '@/stores/robotStateStore';
+import type { TranslationKey } from '@/i18n';
 import { useT } from '@/i18n/useT';
 
 interface PlotConfigDialogProps {
@@ -14,6 +16,7 @@ export function PlotConfigDialog({ open, onClose, chartIndex, config }: PlotConf
   const t = useT();
   const [selectedSource, setSelectedSource] = useState<DataSourceKey>(config.dataSource);
   const [jointIndex, setJointIndex] = useState(config.jointIndex ?? 0);
+  const jointCount = useRobotStateStore((s) => s.robotState?.joint_states.length ?? 7);
   const updateChart = usePlotStore((s) => s.updateChart);
 
   const dataSources = [
@@ -41,7 +44,11 @@ export function PlotConfigDialog({ open, onClose, chartIndex, config }: PlotConf
   ];
 
   const handleOk = () => {
-    updateChart(chartIndex, { dataSource: selectedSource, jointIndex });
+    const keys: Record<DataSourceKey, TranslationKey> = {
+      joint_position: 'plot.src.position', joint_velocity: 'plot.src.velocity', joint_torque: 'plot.src.torque', joint_load: 'plot.src.load',
+      flange_x: 'plot.title.flangeX', flange_y: 'teach.flangeY', flange_z: 'teach.flangeZ',
+    };
+    updateChart(chartIndex, { dataSource: selectedSource, jointIndex, titleKey: keys[selectedSource] });
     onClose();
   };
 
@@ -74,7 +81,7 @@ export function PlotConfigDialog({ open, onClose, chartIndex, config }: PlotConf
             <div style={{ marginBottom: 8 }}>{t('plot.jointIndex')}:</div>
             <InputNumber
               min={0}
-              max={6}
+              max={Math.max(0, jointCount - 1)}
               value={jointIndex}
               onChange={(v) => setJointIndex(v ?? 0)}
             />

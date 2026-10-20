@@ -13,10 +13,11 @@ export const darkThemeConfig: ThemeConfig = {
     colorBorder: '#262930',
     borderRadius: 8,
     fontSize: 15,
-    controlHeight: 40,
+    controlHeight: 44,
     controlHeightSM: 32,
     controlHeightLG: 48,
-    fontFamily: '"Alibaba PuHuiTi 3.0", "PingFang SC", "Microsoft YaHei", sans-serif',
+    fontFamily: 'AlibabaPuHuiTi',
+    motion: false,
   },
   components: {
     Layout: {
@@ -57,20 +58,21 @@ export const darkThemeConfig: ThemeConfig = {
 export const lightThemeConfig: ThemeConfig = {
   algorithm: theme.defaultAlgorithm,
   token: {
-    colorPrimary: '#1e4ed8',
+    colorPrimary: '#2563eb',
     colorBgBase: '#ffffff',
-    colorBgContainer: '#fbfcfd',
+    colorBgContainer: '#ffffff',
     colorBgLayout: '#f9fafb',
     colorBgElevated: '#f3f4f6',
     colorText: '#1a1a1a',
     colorTextSecondary: '#6b7280',
     colorBorder: '#e5e7eb',
-    borderRadius: 6,
+    borderRadius: 8,
     fontSize: 15,
-    controlHeight: 40,
+    controlHeight: 44,
     controlHeightSM: 32,
     controlHeightLG: 48,
-    fontFamily: '"Alibaba PuHuiTi 3.0", "PingFang SC", "Microsoft YaHei", sans-serif',
+    fontFamily: 'AlibabaPuHuiTi',
+    motion: false,
   },
   components: {
     Layout: {
@@ -79,7 +81,7 @@ export const lightThemeConfig: ThemeConfig = {
       bodyBg: '#f9fafb',
     },
     Button: {
-      colorPrimary: '#1e4ed8',
+      colorPrimary: '#2563eb',
       algorithm: true,
       paddingInline: 18,
       paddingInlineSM: 12,
@@ -93,15 +95,15 @@ export const lightThemeConfig: ThemeConfig = {
       colorPrimaryHover: '#2563eb',
     },
     Select: {
-      colorBgContainer: '#fbfcfd',
+      colorBgContainer: '#ffffff',
     },
     Input: {
-      colorBgContainer: '#fbfcfd',
+      colorBgContainer: '#ffffff',
       activeBorderColor: '#1e4ed8',
       hoverBorderColor: '#2563eb',
     },
     InputNumber: {
-      colorBgContainer: '#fbfcfd',
+      colorBgContainer: '#ffffff',
       controlWidth: 85,
       handleWidth: 18,
       activeBorderColor: '#1e4ed8',
@@ -115,7 +117,7 @@ export const lightThemeConfig: ThemeConfig = {
       headerBg: '#ffffff',
     },
     Card: {
-      colorBgContainer: '#fbfcfd',
+      colorBgContainer: '#ffffff',
     },
   },
 };

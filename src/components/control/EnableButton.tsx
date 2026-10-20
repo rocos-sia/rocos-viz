@@ -8,6 +8,7 @@ export function EnableButton() {
   const t = useT();
   const isConnected = useConnectionStore((s) => s.isConnected);
   const isEnabled = useConnectionStore((s) => s.isRobotEnabled);
+  const controlToken = useConnectionStore((s) => s.controlToken);
   const setEnabled = useConnectionStore((s) => s.setEnabled);
   const { host, port } = useConnectionStore.getState();
 
@@ -40,7 +41,7 @@ export function EnableButton() {
         className={`enable-pill${isEnabled ? ' is-enabled' : ' is-disabled'}`}
         icon={<span className={`enable-dot ${isEnabled ? 'on' : 'off'}`} />}
         onClick={handleToggle}
-        disabled={!isConnected}
+        disabled={!isConnected || !controlToken}
         shape="round"
         size="middle"
       >

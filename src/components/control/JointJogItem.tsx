@@ -1,14 +1,12 @@
-import { useCallback, useRef } from 'react';
+import { useHeldJog } from '@/hooks/useHeldJog';
+import { useCallback } from 'react';
 import { Button, Tooltip } from 'antd';
 import { useControlStore } from '@/stores/controlStore';
-import { RobotApiClient } from '@/core/RobotApiClient';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { PositionBar } from '@/components/common/PositionBar';
 import { useT } from '@/i18n/useT';
 import type { JointState } from '@/core/types';
 import {
   JOG_COMMAND_TIMEOUT_S,
-  JOG_FEED_INTERVAL_MS,
   jointMotionParams,
   MAX_JOINTS,
 } from '@/core/constants';
@@ -23,9 +21,6 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
   const t = useT();
   const isDegree = useControlStore((s) => s.isDegree);
   const speedFactor = useControlStore((s) => s.speedFactor);
-  const { host, port } = useConnectionStore.getState();
-  const clientRef = useRef<RobotApiClient | null>(null);
-  const timerRef = useRef<number | null>(null);
 
   const displayValue = isDegree
     ? ((joint.position * 180) / Math.PI).toFixed(2)
@@ -40,41 +35,9 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
     return joints;
   }, [index, jointCount]);
 
-  const startJogLoop = useCallback((direction: 'POSITIVE' | 'NEGATIVE') => {
-    if (timerRef.current !== null) return;
-
-    const client = new RobotApiClient(host, port);
-    clientRef.current = client;
-
-    const joints = buildJoints(direction === 'POSITIVE' ? 1 : -1);
-    const speed = jointMotionParams(speedFactor).speed;
-    const feedJog = () => client.jogJoint(joints, speed, JOG_COMMAND_TIMEOUT_S);
-
-    feedJog().catch((error) => {
-      console.error('Joint jog start failed:', error);
-    });
-
-    timerRef.current = window.setInterval(() => {
-      if (!clientRef.current) return;
-      feedJog().catch((error) => {
-        console.error('Joint jog repeat failed:', error);
-      });
-    }, JOG_FEED_INTERVAL_MS);
-  }, [buildJoints, host, port, speedFactor]);
-
-  const handleStopJog = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (clientRef.current) {
-      clientRef.current.jogStop().catch((error) => {
-        console.error('Joint jog stop failed:', error);
-      });
-      clientRef.current = null;
-    }
-  }, []);
+  const { bind } = useHeldJog((client, sign) => client.jogJoint(
+    buildJoints(sign), jointMotionParams(speedFactor).speed, JOG_COMMAND_TIMEOUT_S,
+  ));
 
   return (
     <div className="jog-item">
@@ -83,11 +46,7 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
       <Tooltip title={t('jog.negative')}>
         <Button
           className="jog-btn"
-          onMouseDown={(e) => { e.preventDefault(); startJogLoop('NEGATIVE'); }}
-          onMouseUp={handleStopJog}
-          onMouseLeave={handleStopJog}
-          onTouchStart={(e) => { e.preventDefault(); startJogLoop('NEGATIVE'); }}
-          onTouchEnd={handleStopJog}
+          {...bind(-1)}
         >
           −
         </Button>
@@ -104,11 +63,7 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
       <Tooltip title={t('jog.positive')}>
         <Button
           className="jog-btn"
-          onMouseDown={(e) => { e.preventDefault(); startJogLoop('POSITIVE'); }}
-          onMouseUp={handleStopJog}
-          onMouseLeave={handleStopJog}
-          onTouchStart={(e) => { e.preventDefault(); startJogLoop('POSITIVE'); }}
-          onTouchEnd={handleStopJog}
+          {...bind(1)}
         >
           +
         </Button>

@@ -36,7 +36,7 @@ export function RobotViewer({ children }: RobotViewerProps) {
   return (
     <Canvas
       camera={{
-        position: [3, -3, 3],
+        position: [1.6, -1.6, 1.5],
         fov: 50,
         near: 0.01,
         far: 1000,
@@ -62,6 +62,7 @@ export function RobotViewer({ children }: RobotViewerProps) {
       <color attach="background" args={[isLight ? '#f8f9fa' : '#111318']} />
       <SceneHelpers showGround={showGround} />
       <OrbitControls
+        makeDefault
         target={[0, 0, 0.5]}
         enableDamping
         dampingFactor={0.1}

@@ -53,7 +53,12 @@ export const usePlotStore = create<PlotStore>((set, get) => ({
   dataBuffers: new Map(),
   showConfigDialog: false,
 
-  setChartCount: (count) => set({ chartCount: count }),
+  setChartCount: (count) => set((state) => ({
+    chartCount: Math.max(1, Math.min(16, count)),
+    charts: Array.from({ length: Math.max(state.charts.length, Math.min(16, count)) }, (_, index) => state.charts[index] ?? {
+      id: index, title: 'Joint Position', titleKey: 'plot.title.jointPosition', dataSource: 'joint_position', jointIndex: index % 7,
+    }),
+  })),
 
   updateChart: (index, config) =>
     set((state) => ({

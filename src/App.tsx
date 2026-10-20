@@ -1,4 +1,6 @@
-import { ConfigProvider } from 'antd';
+import { App as AntApp, ConfigProvider } from 'antd';
+import { HashRouter } from 'react-router';
+import './styles/teach.css';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import { darkThemeConfig, lightThemeConfig } from './styles/theme';
@@ -12,7 +14,7 @@ export default function App() {
 
   return (
     <ConfigProvider locale={language === 'zh' ? zhCN : enUS} theme={currentTheme}>
-      <AppLayout />
+      <AntApp><HashRouter><AppLayout /></HashRouter></AntApp>
     </ConfigProvider>
   );
 }

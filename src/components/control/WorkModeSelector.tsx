@@ -1,3 +1,4 @@
+import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { Select, message } from 'antd';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
@@ -8,8 +9,10 @@ import type { TranslationKey } from '@/i18n';
 
 export function WorkModeSelector() {
   const t = useT();
+  const compact = useCompactScreen();
   const isConnected = useConnectionStore((s) => s.isConnected);
   const { host, port } = useConnectionStore.getState();
+  const token = useConnectionStore((s) => s.controlToken);
   const workMode = useRobotStateStore((s) => s.robotState?.work_mode);
 
   const modeLabel = (value: string) => t(`mode.${value}` as TranslationKey);
@@ -38,7 +41,7 @@ export function WorkModeSelector() {
         options={WORK_MODES.map((m) => ({ value: m.value, label: modeLabel(m.value) }))}
         size="middle"
         style={{ width: 160 }}
-        disabled={!isConnected}
+        disabled={compact || !isConnected || !token}
       />
     </div>
   );
