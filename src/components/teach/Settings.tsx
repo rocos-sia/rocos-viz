@@ -34,7 +34,7 @@ export function Settings({ onDisconnect, onTakeover }: {
         <div className="teach-setting-row"><span>{t('teach.reducedMotion')}</span><Switch checked={reducedMotion} aria-label={t('teach.reducedMotion')} onChange={useTeachStore.getState().setReducedMotion} /></div>
         <div className="teach-setting-row"><span>{t('teach.font')}</span><strong>AlibabaPuHuiTi</strong></div>
       </TeachCard>
-      <TeachCard title={t('teach.about')}><div className="teach-about-brand">ROCOS <span>Teach</span></div><p className="teach-muted">{t('teach.station')}</p><div className="teach-setting-row"><span>{t('teach.version')}</span><strong>{version}</strong></div></TeachCard>
+      <TeachCard title={t('teach.about')}><div className="teach-about-brand">ROCOS <span>HMI</span></div><p className="teach-muted">{t('teach.station')}</p><div className="teach-setting-row"><span>{t('teach.version')}</span><strong>{version}</strong></div></TeachCard>
     </div> },
     { key: 'connection', label: t('teach.connection'), children: <TeachCard title={t('teach.connection')}>
         <div className="teach-setting-row teach-connection-setting">

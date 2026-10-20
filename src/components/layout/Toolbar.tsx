@@ -10,7 +10,7 @@ export function Toolbar({ onShowConnect, onShowAbout }: ToolbarProps) {
 
   return (
     <div className="app-toolbar">
-      <img className="logo" src="/icons/rocos-viz.png" alt="ROCOS-Viz" />
+      <img className="logo" src="/icons/rocos-viz.png" alt="ROCOS HMI" />
       <button
         onClick={onShowConnect}
         style={{

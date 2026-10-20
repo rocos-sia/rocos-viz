@@ -1,4 +1,4 @@
-/* ROCOS Teach: shared tokens and responsive application shell. */
+/* ROCOS HMI: shared tokens and responsive application shell. */
 :root, [data-theme='light'] {
   --teach-card-radius: 16px;
   --teach-card-padding: 24px;
@@ -54,9 +54,10 @@ body { font-size: var(--font-body); line-height: 1.5; color: var(--teach-text); 
 .teach-shell .ant-tabs-ink-bar, .teach-shell .ant-btn, .teach-shell .ant-progress-bg { transition: none !important; }
 .teach-topbar { grid-column: 2; grid-row: 1; min-width: 0; background: var(--teach-topbar-bg); min-height: 72px; display: flex; align-items: center; gap: 16px; color: var(--teach-topbar-text); padding: 12px 20px; border-bottom: 1px solid var(--teach-topbar-border); z-index: 30; }
 .teach-brand { color: #fff; width: 100%; min-height: 72px; padding: 12px 18px; border: 0; border-bottom: 1px solid #314059; background: transparent; text-align: left; flex-shrink: 0; display: flex; gap: 10px; align-items: center;  white-space: nowrap; }
-.teach-brand strong { font-size: var(--font-page); letter-spacing: -.6px; }
-.teach-brand b { font-weight: 400; color: #a8c7ff; }
-.teach-brand-mark { display: grid; place-items: center; width: 30px; height: 33px; flex: 0 0 30px; border: 1px solid #7390b9; border-radius: 7px; font-size: var(--font-page); font-weight: 700; color: #a6c6ff; }
+.teach-brand-logo { display: flex; align-items: center; width: 174px; height: 48px; flex-shrink: 0; overflow: hidden; }
+.teach-brand-logo img { display: block; width: 174px; height: auto; max-width: none; flex-shrink: 0; }
+.sidebar-collapsed .teach-brand-logo { width: 30px; }
+.sidebar-collapsed .teach-brand-logo img { width: 132px; transform: translateX(-11px); }
 .teach-status-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 0; flex: 1; min-width: 0; font-size: var(--font-body); color: var(--teach-topbar-text); }
 .teach-status-cell { display: flex; flex-direction: column; gap: 6px; padding: 0 16px; border-left: 1px solid var(--teach-topbar-border); min-width: 0; }
 .teach-status-strip > .teach-status-cell:first-child { border-left: 0; }
@@ -299,13 +300,14 @@ body { font-size: var(--font-body); line-height: 1.5; color: var(--teach-text); 
 .teach-shell { transition: grid-template-columns 240ms cubic-bezier(.2, .8, .2, 1); }
 .teach-sidebar { transition: width 240ms cubic-bezier(.2, .8, .2, 1); }
 .teach-brand { padding-inline: 17px; gap: 10px; }
-.teach-brand strong, .teach-sidebar nav a > span:not(.anticon) { max-width: 160px; opacity: 1; white-space: nowrap; overflow: hidden; transition: max-width 240ms ease, opacity 160ms ease; }
+.teach-brand-logo { transition: width 240ms ease; }
+.teach-brand-logo img { transition: width 240ms ease, transform 240ms ease; }
+.teach-sidebar nav a > span:not(.anticon) { max-width: 160px; opacity: 1; white-space: nowrap; overflow: hidden; transition: max-width 240ms ease, opacity 160ms ease; }
 .teach-sidebar nav a { overflow: hidden; transition: padding 240ms ease, gap 240ms ease; }
 .teach-sidebar nav a .anticon { flex: 0 0 21px; }
 .teach-sidebar nav { transition: padding 240ms ease; }
 .teach-nav-caption { max-height: 64px; overflow: hidden; white-space: nowrap; transition: max-height 240ms ease, padding 240ms ease, opacity 160ms ease; }
 .teach-sidebar-bottom { overflow: hidden; white-space: nowrap; transition: opacity 160ms ease; }
-.sidebar-collapsed .teach-brand strong,
 .sidebar-collapsed .teach-sidebar nav a > span:not(.anticon) { max-width: 0; opacity: 0; }
 .sidebar-collapsed .teach-nav-caption { max-height: 0; padding-block: 0; opacity: 0; }
 .sidebar-collapsed .teach-sidebar-bottom { opacity: 0; visibility: hidden; }

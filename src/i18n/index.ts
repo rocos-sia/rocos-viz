@@ -161,7 +161,7 @@ const DICT = {
   'teach.parameters': { en: 'Robot parameters', zh: '机器人参数' },
   'teach.openParameters': { en: 'Open parameter panel', zh: '打开参数面板' },
   'teach.impedance': { en: 'Impedance', zh: '阻抗参数' },
-  'teach.about': { en: 'About ROCOS Teach', zh: '关于 ROCOS Teach' },
+  'teach.about': { en: 'About ROCOS HMI', zh: '关于 ROCOS HMI' },
   'teach.version': { en: 'Version', zh: '版本' },
   'teach.more': { en: 'More', zh: '更多' },
   'teach.station': { en: 'ROBOT WORKSPACE', zh: '机器人示教工作站' },

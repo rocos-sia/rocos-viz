@@ -117,14 +117,14 @@ export function TeachShell() {
     <aside className="teach-sidebar">
       <Tooltip title={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} placement="right">
         <button className="teach-brand" aria-label={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} aria-expanded={!sidebarCollapsed} aria-controls="teach-navigation" onClick={() => useUIStore.getState().toggleSidebar()}>
-          <span className="teach-brand-mark" aria-hidden="true">R</span><strong>ROCOS <b>Teach</b></strong>
+          <span className="teach-brand-logo"><img src="/icons/ROCOS.png" alt="ROCOS" width={174} height={58} /></span>
         </button>
       </Tooltip>
       <div className="teach-nav-caption">{t('teach.workspace')}</div>
       <nav id="teach-navigation" aria-label={t('teach.workspace')}>{pages.map((item) => <Tooltip key={item.id} title={sidebarCollapsed ? t(`teach.${item.id}`) : undefined} placement="right">
         <NavLink to={`/${item.id}`} aria-label={t(`teach.${item.id}`)}>{item.icon}<span>{t(`teach.${item.id}`)}</span></NavLink>
       </Tooltip>)}</nav>
-      <div className="teach-sidebar-bottom"><span className="teach-sidebar-symbol"><RobotOutlined /></span><strong>ROCOS Teach</strong><small>{t('teach.station')}</small><span className="teach-sidebar-version">v3.0</span></div>
+      <div className="teach-sidebar-bottom"><span className="teach-sidebar-symbol"><RobotOutlined /></span><strong>ROCOS HMI</strong><small>{t('teach.station')}</small><span className="teach-sidebar-version">v3.0</span></div>
     </aside>
     <main className="teach-content" aria-label={t(`teach.${page.id}`)} ref={root}>
       <Suspense fallback={<div className="teach-loading"><Spin /></div>}>

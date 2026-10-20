@@ -52,7 +52,7 @@ export const useTeachStore = create<TeachState>()(persist((set) => ({
   outputs: [false, true, false, false, false, false, false, false],
   demoRunning: false,
   demoStep: 0,
-  source: '-- ROCOS Teach · preview\n-- Review controller API before execution.\nfunction main()\n  -- Add robot instructions here.\nend\n',
+  source: '-- ROCOS HMI · preview\n-- Review controller API before execution.\nfunction main()\n  -- Add robot instructions here.\nend\n',
   workspace: null,
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   addPoint: (point) => set((s) => ({ points: [...s.points, { ...point, id: `P${Date.now()}` }] })),

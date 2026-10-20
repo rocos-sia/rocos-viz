@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ROCOS-Viz URDF Test Server.
+ROCOS HMI URDF Test Server.
 
 Serves URDF model files, robot info/state, and mesh assets for the
 frontend dev workflow.  Uses only Python stdlib — no pip install required.
@@ -485,7 +485,7 @@ class UrdfRequestHandler(BaseHTTPRequestHandler):
 # ── Main ──────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="ROCOS-Viz URDF Test Server")
+    parser = argparse.ArgumentParser(description="ROCOS HMI URDF Test Server")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--urdf", type=str, default=None)
     args = parser.parse_args()

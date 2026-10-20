@@ -1,4 +1,6 @@
-# ROCOS Teach UI 首轮实现
+# ROCOS HMI UI 首轮实现
+
+当前产品名统一为 **ROCOS HMI**，包括浏览器标题、侧栏、关于页面和新建程序注释。品牌图标 `public/icons/rocos-viz.png`、`public/icons/rocos.png` 中的 VIZ 已替换为 HMI，浏览器 `public/favicon.ico` 同步更新。图片使用内置 imagegen 编辑，导出为原有像素尺寸；[最终图片提示词](assets/hmi-brand-prompts.json) 留作维护参考。仓库 URL、文档路径及 `rocos-teach-drafts` 存储键保留兼容，用户已有程序内容不会因改名被覆盖。
 
 设计基线：[ROCOS_Teach_UI_Design_Spec_v1.0.md](ROCOS_Teach_UI_Design_Spec_v1.0.md)。本轮按内部测试提交，软件版本由 `3.0.0-rc.2` 更新为 `3.0.0-rc.3`，保留现有控制器接口。
 

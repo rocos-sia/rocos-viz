@@ -105,7 +105,7 @@ export function Programming() {
     <TeachCard title={t('teach.programLibrary')} extra={connected ? <Button icon={<ReloadOutlined />} aria-label={t('teach.refresh')} onClick={() => void refresh()} /> : <DemoBadge />}>
       {error && <Alert type="error" message={t('teach.loadFailed')} description={error} />}
       <div className="teach-file-list">{(connected ? files : demoPrograms.map((p) => p.name)).map((name) => <Button type={filename === name ? 'primary' : 'text'} key={name} onClick={() => void open(name)}>{name}</Button>)}</div>
-      <Button block onClick={() => { setFilename('program.lua'); useTeachStore.getState().setSource('-- ROCOS Teach\nfunction main()\nend\n'); }}>{t('teach.newProgram')}</Button>
+      <Button block onClick={() => { setFilename('program.lua'); useTeachStore.getState().setSource('-- ROCOS HMI\nfunction main()\nend\n'); }}>{t('teach.newProgram')}</Button>
       <p className="teach-muted">{t('teach.draft')}</p>
     </TeachCard>
     <TeachCard title={t('teach.programming')} extra={<span className="teach-muted">{t('teach.scriptState')}: {connected ? robotStatus ?? '—' : t('teach.offline')}</span>}>

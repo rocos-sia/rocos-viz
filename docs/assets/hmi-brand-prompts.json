@@ -1,0 +1,15 @@
+{
+  "tool": "built-in imagegen",
+  "assets": [
+    {
+      "path": "public/icons/rocos-viz.png",
+      "prompt": "Edit the provided application icon only. Replace the lower white word \"VIZ\" with exactly \"HMI\" (uppercase H M I). Preserve the upper word ROCOS exactly, the bold white sans-serif typography, original blue fill, rounded rectangle shape, transparent corners, original layout and margins, and landscape 267:209 aspect ratio. HMI must occupy the same lower line with matching font height and weight. No other design changes. This will replace a production app icon."
+    },
+    {
+      "path": "public/icons/rocos.png",
+      "reference": "HMI rounded rectangle result",
+      "prompt": "Make a square favicon variant of this ROCOS HMI logo. Use a completely flat solid blue SHARP CORNER rectangle at x=8 y=34 width=240 height=188 on a transparent 256x256 square canvas. Keep both white words ROCOS and HMI exactly. No gradients, no dark patches, no textures, no transparency within blue rectangle. Transparent padding only outside the rectangle. Solid perfectly uniform bright blue fill, crisp lettering."
+    }
+  ],
+  "export": "Downscaled to 267x209 and 256x256; favicon.ico exported from the square asset at 256, 64, 48, 32 and 16 pixels."
+}

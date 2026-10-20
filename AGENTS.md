@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-ROCOS-Viz is a React 18, TypeScript, and Vite application for robot visualization and control.
+ROCOS HMI is a React 18, TypeScript, and Vite application for robot visualization and control.
 
 - `src/core/`: REST/WebSocket clients, control heartbeat, model loading, kinematics, and shared types.
 - `src/stores/` and `src/hooks/`: Zustand state and connection/lifecycle integration.
