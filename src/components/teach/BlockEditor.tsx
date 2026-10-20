@@ -1,3 +1,4 @@
+import { typography } from '@/styles/typography';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, message } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
@@ -32,7 +33,7 @@ export function BlockEditor() {
     luaGenerator.forBlock.teach_move = (block) => `-- Preview move: ${String(block.getFieldValue('POINT')).replace(/[\r\n]/g, ' ')}\n`;
     luaGenerator.forBlock.teach_wait = (block) => `-- Preview wait: ${Number(block.getFieldValue('SECONDS'))} s\n`;
     luaGenerator.forBlock.teach_output = (block) => `-- Preview output: DO ${Number(block.getFieldValue('INDEX'))}\n`;
-    const theme = Blockly.Theme.defineTheme('rocos', { name: 'rocos', base: Blockly.Themes.Classic, fontStyle: { family: 'AlibabaPuHuiTi', size: 14, weight: '500' } });
+    const theme = Blockly.Theme.defineTheme('rocos', { name: 'rocos', base: Blockly.Themes.Classic, fontStyle: { family: 'AlibabaPuHuiTi', size: typography.body, weight: '500' } });
     const instance = Blockly.inject(root.current, {
       theme, renderer: 'zelos', trashcan: true,
       zoom: { controls: true, wheel: false, startScale: 0.95 },

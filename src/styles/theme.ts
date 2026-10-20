@@ -1,5 +1,6 @@
 import type { ThemeConfig } from 'antd';
 import { theme } from 'antd';
+import { typographyTheme } from './typography';
 
 export const darkThemeConfig: ThemeConfig = {
   algorithm: theme.darkAlgorithm,
@@ -12,7 +13,7 @@ export const darkThemeConfig: ThemeConfig = {
     colorTextSecondary: '#858585',
     colorBorder: '#262930',
     borderRadius: 8,
-    fontSize: 15,
+    ...typographyTheme,
     controlHeight: 44,
     controlHeightSM: 32,
     controlHeightLG: 48,
@@ -20,12 +21,17 @@ export const darkThemeConfig: ThemeConfig = {
     motion: false,
   },
   components: {
+    Modal: { titleFontSize: typographyTheme.fontSizeHeading2 },
+    Drawer: { fontSizeLG: typographyTheme.fontSizeHeading2 },
     Layout: {
       siderBg: '#1a1d24',
       headerBg: '#111318',
       bodyBg: '#111318',
     },
     Button: {
+      contentFontSize: typographyTheme.fontSize,
+      contentFontSizeSM: typographyTheme.fontSize,
+      contentFontSizeLG: typographyTheme.fontSize,
       colorPrimary: '#3b82f6',
       algorithm: true,
       paddingInline: 18,
@@ -67,7 +73,7 @@ export const lightThemeConfig: ThemeConfig = {
     colorTextSecondary: '#6b7280',
     colorBorder: '#e5e7eb',
     borderRadius: 8,
-    fontSize: 15,
+    ...typographyTheme,
     controlHeight: 44,
     controlHeightSM: 32,
     controlHeightLG: 48,
@@ -75,12 +81,16 @@ export const lightThemeConfig: ThemeConfig = {
     motion: false,
   },
   components: {
+    Drawer: { fontSizeLG: typographyTheme.fontSizeHeading2 },
     Layout: {
       siderBg: '#fbfcfd',
       headerBg: '#f9fafb',
       bodyBg: '#f9fafb',
     },
     Button: {
+      contentFontSize: typographyTheme.fontSize,
+      contentFontSizeSM: typographyTheme.fontSize,
+      contentFontSizeLG: typographyTheme.fontSize,
       colorPrimary: '#2563eb',
       algorithm: true,
       paddingInline: 18,
@@ -113,6 +123,7 @@ export const lightThemeConfig: ThemeConfig = {
       colorBgSpotlight: '#374151',
     },
     Modal: {
+      titleFontSize: typographyTheme.fontSizeHeading2,
       contentBg: '#ffffff',
       headerBg: '#ffffff',
     },

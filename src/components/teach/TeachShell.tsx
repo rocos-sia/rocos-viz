@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Button, Popconfirm, Slider, Spin, Tooltip, message } from 'antd';
+import { Button, Slider, Spin, Tooltip, message } from 'antd';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router';
-import { AppstoreOutlined, AimOutlined, CodeOutlined, PlayCircleOutlined, ApiOutlined, LineChartOutlined, SettingOutlined, TranslationOutlined, DisconnectOutlined, PauseOutlined, CaretRightOutlined, SafetyCertificateOutlined, RobotOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, AimOutlined, CodeOutlined, PlayCircleOutlined, ApiOutlined, LineChartOutlined, SettingOutlined, PauseOutlined, CaretRightOutlined, RobotOutlined } from '@ant-design/icons';
 import { useControllerSession } from '@/hooks/useControllerSession';
 import { useTelemetryCollector } from '@/hooks/useTelemetryCollector';
 import { useMotionScope } from '@/hooks/useMotionScope';
@@ -12,13 +12,13 @@ import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useControlStore } from '@/stores/controlStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
-import { ConnectDialog } from '@/components/connection/ConnectDialog';
 import { EnableButton } from '@/components/control/EnableButton';
 import { Overview } from './Overview';
 import { Teaching } from './Teaching';
 import { Devices } from './Devices';
 import { Execution } from './Execution';
 import { Settings } from './Settings';
+import { HeaderAccount } from './HeaderAccount';
 
 const Programming = lazy(() => import('./Programming').then((m) => ({ default: m.Programming })));
 const Diagnostics = lazy(() => import('./Diagnostics').then((m) => ({ default: m.Diagnostics })));
@@ -92,6 +92,7 @@ function ControlBar() {
     <div className="teach-controlbar-state"><i className={connected ? 'connected' : ''} /><span>{connected ? status ?? t('teach.unknown') : t('teach.offline')}</span><small>{t(small ? 'teach.smallReadOnly' : 'teach.jogReason')}</small></div>
     <div className="teach-speed"><label>{t('teach.speed')}</label><Slider aria-label={t('teach.speed')} min={1} max={99} value={Math.round(speed * 100)} onChange={(v) => useControlStore.getState().setSpeedFactor(v / 100)} /><strong>{Math.round(speed * 100)}%</strong></div>
     <div className="teach-run-buttons">
+      <EnableButton iconOnly disabled={small} />
       <Button icon={<CaretRightOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'PAUSED'} onClick={() => void command('resume')}>{t('teach.run')}</Button>
       <Button icon={<PauseOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
       <Button danger icon={<span className="teach-stop-icon" aria-hidden="true" />} disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.stop')}</Button>
@@ -101,27 +102,17 @@ function ControlBar() {
 
 export function TeachShell() {
   const t = useT();
-  const language = useUIStore((s) => s.language);
-  const connected = useConnectionStore((s) => s.isConnected);
-  const token = useConnectionStore((s) => s.controlToken);
   const session = useControllerSession();
   useTelemetryCollector();
   const location = useLocation();
   const reducedMotion = useTeachStore((s) => s.reducedMotion);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const page = pages.find((p) => location.pathname === `/${p.id}`) ?? pages[0];
-  const [connectOpen, setConnectOpen] = useState(false);
   const root = useMotionScope(location.pathname);
   return <div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
     <header className="teach-topbar">
       <StatusStrip />
-      <div className="teach-header-actions">
-        {connected ? <Popconfirm title={t('conn.disconnectTitle')} onConfirm={session.handleDisconnect}><Button aria-label={t('conn.disconnect')} icon={<DisconnectOutlined />} /></Popconfirm>
-          : <Button icon={<ApiOutlined />} onClick={() => setConnectOpen(true)}>{t('conn.connect')}</Button>}
-        {connected && !token && <Popconfirm title={t('control.takeoverTitle')} description={t('control.takeoverConfirm', { owner: session.controlOwnerName ?? session.controlOwnerIp ?? t('teach.unknown') })} onConfirm={session.handleTakeover}><Button aria-label={t('control.takeover')} icon={<SafetyCertificateOutlined />} /></Popconfirm>}
-        <EnableButton />
-        <Button aria-label={t('teach.language')} icon={<TranslationOutlined />} onClick={() => useUIStore.getState().toggleLanguage()}>{language === 'zh' ? 'EN' : '中'}</Button>
-      </div>
+      <HeaderAccount />
     </header>
     <aside className="teach-sidebar">
       <Tooltip title={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} placement="right">
@@ -138,18 +129,17 @@ export function TeachShell() {
     <main className="teach-content" aria-label={t(`teach.${page.id}`)} ref={root}>
       <Suspense fallback={<div className="teach-loading"><Spin /></div>}>
         <Routes>
-          <Route path="/dashboard" element={<Overview />} />
+          <Route path="/dashboard" element={<Overview urdfContent={session.urdfContent} />} />
           <Route path="/teaching" element={<Teaching urdfContent={session.urdfContent} />} />
           <Route path="/programming" element={<Programming />} />
           <Route path="/execution" element={<Execution urdfContent={session.urdfContent} />} />
           <Route path="/devices" element={<Devices />} />
           <Route path="/diagnostics" element={<Diagnostics />} />
-          <Route path="/settings" element={<Settings onConnect={() => setConnectOpen(true)} />} />
+          <Route path="/settings" element={<Settings onDisconnect={session.handleDisconnect} onTakeover={session.handleTakeover} />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
     </main>
     <ControlBar />
-    <ConnectDialog open={connectOpen} onClose={() => setConnectOpen(false)} />
   </div>;
 }

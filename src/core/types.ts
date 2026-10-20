@@ -1,3 +1,19 @@
+export interface JointDisplayRange {
+  min?: number;
+  max?: number;
+  unit: '°' | 'mm';
+}
+
+/** Metadata from a robot description; masses are in kg and missing values remain null. */
+export interface RobotModelSummary {
+  name: string;
+  dof: number;
+  linkCount: number;
+  massLinkCount: number;
+  definedMass: number | null;
+  totalMass: number | null;
+}
+
 export interface Vector3D {
   x: number;
   y: number;
@@ -102,13 +118,13 @@ export interface MoveResult {
 
 export interface TaskStatus {
   task_id: string;
-  task: any;
+  task: unknown;
   robot_state: string;
   is_running: boolean;
   control_active: boolean;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   code: number;
   message: string;

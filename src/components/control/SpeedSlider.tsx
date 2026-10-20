@@ -21,7 +21,7 @@ export function SpeedSlider() {
           style={{ flex: 1 }}
           tooltip={{ formatter: (v) => `${((v || 0) / 10).toFixed(1)}%` }}
         />
-        <Text style={{ width: 60, textAlign: 'right', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+        <Text style={{ width: 60, textAlign: 'right', fontSize: 'var(--font-body)', fontVariantNumeric: 'tabular-nums' }}>
           {(speedFactor * 100).toFixed(1)}%
         </Text>
       </div>

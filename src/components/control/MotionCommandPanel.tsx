@@ -1,3 +1,4 @@
+import { useUnitStore } from '@/stores/unitStore';
 import { useState, useCallback, useEffect } from 'react';
 import { Button, InputNumber, message } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
@@ -12,8 +13,8 @@ import * as THREE from 'three';
 export function MotionCommandPanel() {
   const t = useT();
   const speedFactor = useControlStore((s) => s.speedFactor);
-  const isDegree = useControlStore((s) => s.isDegree);
-  const isMM = useControlStore((s) => s.isMM);
+  const isDegree = useUnitStore((s) => s.isDegree);
+  const isMM = useUnitStore((s) => s.isMM);
   const isConnected = useConnectionStore((s) => s.isConnected);
   const { host, port } = useConnectionStore.getState();
 
@@ -26,12 +27,12 @@ export function MotionCommandPanel() {
   const handleMoveJ_IK = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const x = cartesian.x / (isMM ? 1000 : 1);
-    const y = cartesian.y / (isMM ? 1000 : 1);
-    const z = cartesian.z / (isMM ? 1000 : 1);
-    const roll = cartesian.roll * (isDegree ? Math.PI / 180 : 1);
-    const pitch = cartesian.pitch * (isDegree ? Math.PI / 180 : 1);
-    const yaw = cartesian.yaw * (isDegree ? Math.PI / 180 : 1);
+    const x = cartesian.x;
+    const y = cartesian.y;
+    const z = cartesian.z;
+    const roll = cartesian.roll;
+    const pitch = cartesian.pitch;
+    const yaw = cartesian.yaw;
 
     const euler = new THREE.Euler(roll, pitch, yaw, 'ZYX');
     const q = new THREE.Quaternion().setFromEuler(euler);
@@ -45,20 +46,20 @@ export function MotionCommandPanel() {
         acceleration,
       );
       message.success(t('common.sent', { cmd: 'MoveJ_IK' }));
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : String(error));
     }
-  }, [cartesian, speedFactor, isDegree, isMM, isConnected, host, port, t]);
+  }, [cartesian, speedFactor, isConnected, host, port, t]);
 
   const handleMoveL = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const x = cartesian.x / (isMM ? 1000 : 1);
-    const y = cartesian.y / (isMM ? 1000 : 1);
-    const z = cartesian.z / (isMM ? 1000 : 1);
-    const roll = cartesian.roll * (isDegree ? Math.PI / 180 : 1);
-    const pitch = cartesian.pitch * (isDegree ? Math.PI / 180 : 1);
-    const yaw = cartesian.yaw * (isDegree ? Math.PI / 180 : 1);
+    const x = cartesian.x;
+    const y = cartesian.y;
+    const z = cartesian.z;
+    const roll = cartesian.roll;
+    const pitch = cartesian.pitch;
+    const yaw = cartesian.yaw;
 
     const euler = new THREE.Euler(roll, pitch, yaw, 'ZYX');
     const q = new THREE.Quaternion().setFromEuler(euler);
@@ -72,40 +73,40 @@ export function MotionCommandPanel() {
         acceleration,
       );
       message.success(t('common.sent', { cmd: 'MoveL' }));
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : String(error));
     }
-  }, [cartesian, speedFactor, isDegree, isMM, isConnected, host, port, t]);
+  }, [cartesian, speedFactor, isConnected, host, port, t]);
 
   const handleMoveJ = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const rads = joints.map((j) => j * (isDegree ? Math.PI / 180 : 1));
+    const rads = joints;
 
     try {
       const client = new RobotApiClient(host, port);
       const { speed, acceleration } = jointMotionParams(speedFactor);
       await client.moveJ(rads, speed, acceleration);
       message.success(t('common.sent', { cmd: 'MoveJ' }));
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : String(error));
     }
-  }, [joints, speedFactor, isDegree, isConnected, host, port, t]);
+  }, [joints, speedFactor, isConnected, host, port, t]);
 
   const handleMoveL_FK = useCallback(async () => {
     if (!isConnected) { message.warning(t('common.connectFirst')); return; }
 
-    const rads = joints.map((j) => j * (isDegree ? Math.PI / 180 : 1));
+    const rads = joints;
 
     try {
       const client = new RobotApiClient(host, port);
       const { speed, acceleration } = cartesianMotionParams(speedFactor);
       await client.moveL_FK(rads, speed, acceleration);
       message.success(t('common.sent', { cmd: 'MoveL_FK' }));
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : String(error));
     }
-  }, [joints, speedFactor, isDegree, isConnected, host, port, t]);
+  }, [joints, speedFactor, isConnected, host, port, t]);
 
   const updateCartesian = (key: string, value: number | null) => {
     setCartesian((prev) => ({ ...prev, [key]: value || 0 }));
@@ -119,6 +120,8 @@ export function MotionCommandPanel() {
     });
   };
 
+  const angleFactor = isDegree ? 180 / Math.PI : 1;
+  const lengthFactor = isMM ? 1000 : 1;
   const posUnit = isMM ? 'mm' : 'm';
   const angUnit = isDegree ? 'deg' : 'rad';
 
@@ -142,8 +145,8 @@ export function MotionCommandPanel() {
             <div className="precise-field" key={key}>
               <span className="precise-field-label">{label}</span>
               <InputNumber
-                value={cartesian[key]}
-                onChange={(v) => updateCartesian(key, v)}
+                value={cartesian[key] * (['x', 'y', 'z'].includes(key) ? lengthFactor : angleFactor)}
+                onChange={(v) => updateCartesian(key, v === null ? null : v / (['x', 'y', 'z'].includes(key) ? lengthFactor : angleFactor))}
                 step={1}
                 controls={false}
                 className="precise-input"
@@ -154,10 +157,10 @@ export function MotionCommandPanel() {
         </div>
 
         <div className="precise-actions">
-          <Button size="large" type="primary" icon={<ThunderboltOutlined />} onClick={handleMoveJ_IK} disabled={!isConnected} block>
+          <Button size="large" type="primary" icon={<ThunderboltOutlined aria-hidden="true" />} onClick={handleMoveJ_IK} disabled={!isConnected} block>
             MoveJ_IK
           </Button>
-          <Button size="large" icon={<ThunderboltOutlined />} onClick={handleMoveL} disabled={!isConnected} block>
+          <Button size="large" icon={<ThunderboltOutlined aria-hidden="true" />} onClick={handleMoveL} disabled={!isConnected} block>
             MoveL
           </Button>
         </div>
@@ -172,11 +175,11 @@ export function MotionCommandPanel() {
             <div className="precise-field" key={i}>
               <span className="precise-field-label">J{i + 1}</span>
               <InputNumber
-                value={val}
-                onChange={(v) => updateJoint(i, v)}
+                value={val * angleFactor}
+                onChange={(v) => updateJoint(i, v === null ? null : v / angleFactor)}
                 step={1}
-                min={-180}
-                max={180}
+                min={-Math.PI * angleFactor}
+                max={Math.PI * angleFactor}
                 controls={false}
                 className="precise-input"
               />
@@ -186,10 +189,10 @@ export function MotionCommandPanel() {
         </div>
 
         <div className="precise-actions">
-          <Button size="large" type="primary" icon={<ThunderboltOutlined />} onClick={handleMoveJ} disabled={!isConnected} block>
+          <Button size="large" type="primary" icon={<ThunderboltOutlined aria-hidden="true" />} onClick={handleMoveJ} disabled={!isConnected} block>
             MoveJ
           </Button>
-          <Button size="large" icon={<ThunderboltOutlined />} onClick={handleMoveL_FK} disabled={!isConnected} block>
+          <Button size="large" icon={<ThunderboltOutlined aria-hidden="true" />} onClick={handleMoveL_FK} disabled={!isConnected} block>
             MoveL_FK
           </Button>
         </div>

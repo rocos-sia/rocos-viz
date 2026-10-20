@@ -29,7 +29,7 @@ function LuaEditor() {
       extensions: [
         basicSetup, StreamLanguage.define(lua), EditorView.lineWrapping,
         EditorView.theme({
-          '&': { height: '100%', fontFamily: 'AlibabaPuHuiTi', backgroundColor: 'var(--color-bg-surface)', color: 'var(--color-text)' },
+          '&': { height: '100%', fontSize: 'var(--font-body)', lineHeight: '1.5', fontFamily: 'AlibabaPuHuiTi', backgroundColor: 'var(--color-bg-surface)', color: 'var(--color-text)' },
           '.cm-scroller': { fontFamily: 'AlibabaPuHuiTi', overflow: 'auto' },
           '.cm-content': { padding: '20px 0', fontFamily: 'AlibabaPuHuiTi' },
           '.cm-gutters': { backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', border: 'none', fontFamily: 'AlibabaPuHuiTi' },

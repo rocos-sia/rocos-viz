@@ -138,7 +138,7 @@ export function ModelLoaderPanel() {
         {loading && progress && (
           <div>
             <Progress percent={percent} size="small" />
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-caption)', marginTop: 8 }}>
               {progress.loaded}/{progress.total} — {progress.currentFile}
             </p>
           </div>

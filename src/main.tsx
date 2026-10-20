@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { useUIStore } from './stores/uiStore';
 import './styles/global.css';
+import { installTypographyTokens } from './styles/typography';
+
+installTypographyTokens();
 
 function Root() {
   const themeMode = useUIStore((s) => s.themeMode);

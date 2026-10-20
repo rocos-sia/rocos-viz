@@ -8,13 +8,15 @@ test('offline routes and preview actions never issue controller requests', async
   await page.goto('/#/dashboard');
   await expect(page.getByRole('main', { name: '总览', exact: true })).toBeVisible();
   await expect(page.locator('.teach-controlbar').getByRole('button', { name: '停止', exact: true })).toBeDisabled();
+  await expect(page.locator('.teach-topbar button')).toHaveCount(0);
+  await expect(page.locator('.teach-controlbar').getByRole('button', { name: '未使能', exact: true })).toBeDisabled();
   await page.locator('.teach-sidebar').getByRole('link', { name: '手动示教' }).click();
   await page.getByRole('button', { name: 'J1 +', exact: true }).click();
   await expect(page.locator('.teach-state-column .teach-joint-row').first()).toContainText('1.00');
   await expect(page.getByRole('heading', { name: '运动控制', exact: true })).toBeVisible();
   await expect(page.locator('.teach-jog-card .teach-preview-joint')).toBeVisible();
+  await page.getByRole('radiogroup', { name: '点动空间' }).getByText('笛卡尔点动', { exact: true }).click();
   await expect(page.locator('.teach-jog-card .teach-preview-cartesian')).toBeVisible();
-  await expect(page.locator('.teach-jog-card .teach-preview-null')).toBeVisible();
   await expect(page.locator('.teach-tools-card')).toHaveCount(0);
   await expect(page.locator('.teach-topbar')).toContainText('TCP_01');
   await expect(page.locator('.teach-topbar')).toContainText('Workpiece_01');
@@ -40,8 +42,13 @@ test('offline routes and preview actions never issue controller requests', async
   await page.locator('.teach-sidebar').getByRole('link', { name: '监控诊断' }).click();
   await expect(page.locator('.teach-chart-grid canvas').first()).toBeVisible();
   await page.locator('.teach-sidebar').getByRole('link', { name: '系统设置' }).click();
-  await page.getByRole('button', { name: '界面语言' }).click();
+  await page.locator('.teach-sidebar').getByRole('link', { name: '系统设置' }).click();
+  await page.getByRole('radiogroup', { name: '界面语言' }).getByText('English', { exact: true }).click();
   await expect(page.getByRole('main', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Controller connection', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+  await expect(page.getByLabel('IP Address', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(calls).toEqual([]);
   expect(errors).toEqual([]);
 });
@@ -62,6 +69,7 @@ for (const width of [1920, 1024, 390]) {
       });
       expect(Math.abs(unusedHeight), `${route} fills the workspace`).toBeLessThanOrEqual(1);
       await expect(page.locator('.teach-controlbar').getByRole('button', { name: '停止', exact: true })).toBeInViewport();
+      await expect(page.locator('.teach-controlbar').getByRole('button', { name: '未使能', exact: true })).toBeInViewport();
       const overflow = await page.evaluate(() => {
         const main = document.querySelector('main')!;
         return document.documentElement.scrollWidth > window.innerWidth
@@ -82,6 +90,7 @@ for (const width of [1920, 1024, 390]) {
 
 test('controller session survives navigation; releasing and leaving jog sends stop', async ({ page }) => {
   const commands: string[] = [];
+  const powerCommands: string[] = [];
   const cartesianCommands: { twist: number[]; frame: string }[] = [];
   let sockets = 0;
   await page.addInitScript(() => {
@@ -91,6 +100,7 @@ test('controller session survives navigation; releasing and leaving jog sends st
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.includes('/jog/')) commands.push(path);
+    if (path === '/api/robot/enable' || path === '/api/robot/disable') powerCommands.push(path);
     if (path.endsWith('/jog/cartesian')) cartesianCommands.push(route.request().postDataJSON());
     if (path === '/api/robot/urdf') return route.fulfill({ contentType: 'text/xml', body: '<robot name="test"><link name="base"/></robot>' });
     await route.fulfill({ json: { success: true, code: 0, message: 'ok', data: { has_owner: true, owner_client_id: 'ui-test-client', heartbeat_interval_seconds: 1, scripts: [] } } });
@@ -110,6 +120,12 @@ test('controller session survives navigation; releasing and leaving jog sends st
   await expect.poll(() => commands.filter((p) => p.endsWith('/stop')).length).toBeGreaterThan(0);
   await expect(page.locator('.teach-topbar')).toContainText('TCP_live');
   await expect(page.locator('.teach-topbar')).toContainText('Fixture_live');
+  await jog.focus();
+  await page.keyboard.down('Space');
+  const stopBeforeSwitch = commands.filter((path) => path.endsWith('/stop')).length;
+  await page.getByRole('radiogroup', { name: '点动空间' }).getByText('笛卡尔点动', { exact: true }).click();
+  await page.keyboard.up('Space');
+  await expect.poll(() => commands.filter((path) => path.endsWith('/stop')).length).toBeGreaterThan(stopBeforeSwitch);
   const cartesian = page.getByRole('button', { name: 'RX +', exact: true });
   await cartesian.focus();
   await page.keyboard.down('Space');
@@ -117,10 +133,20 @@ test('controller session survives navigation; releasing and leaving jog sends st
   await page.keyboard.up('Space');
   expect(cartesianCommands[0]).toMatchObject({ twist: [0, 0, 0, 1, 0, 0], frame: 'BASE' });
   await expect(page.locator('.teach-jog-groups .jog-value:visible')).toHaveCount(0);
-  await page.locator('.teach-jog-options .ant-select').last().click();
+  await page.locator('.teach-jog-reference .ant-select').click();
   await page.locator('.ant-select-dropdown').getByText('工具坐标系', { exact: true }).click();
   await expect(page.locator('.teach-state-column .teach-pose-grid > div').first()).toContainText('125.000');
+  const nullJog = page.getByRole('button', { name: 'N1 +', exact: true });
+  await nullJog.scrollIntoViewIfNeeded();
+  await nullJog.focus();
+  await page.keyboard.down('Space');
+  await expect.poll(() => commands.filter((path) => path.endsWith('/svd')).length).toBeGreaterThan(0);
+  const stopsBeforeNullSwitch = commands.filter((path) => path.endsWith('/stop')).length;
+  await page.getByRole('radiogroup', { name: '点动空间' }).getByText('关节点动', { exact: true }).click();
+  await page.keyboard.up('Space');
+  await expect.poll(() => commands.filter((path) => path.endsWith('/stop')).length).toBeGreaterThan(stopsBeforeNullSwitch);
   const initialSockets = sockets; // React StrictMode mounts effects twice in development.
+  await page.getByRole('radiogroup', { name: '点动空间' }).getByText('关节点动', { exact: true }).click();
   commands.length = 0;
   await jog.focus();
   await page.keyboard.down('Space');
@@ -132,8 +158,25 @@ test('controller session survives navigation; releasing and leaving jog sends st
   expect(sockets).toBe(initialSockets);
   await expect(page.locator('.teach-topbar')).toContainText('TCP_live');
   await expect(page.locator('.teach-topbar')).toContainText('Fixture_live');
+  const power = page.locator('.teach-controlbar .teach-enable-icon');
+  await expect(power).toHaveAttribute('aria-pressed', 'true');
+  await power.click();
+  await expect(power).toHaveAttribute('aria-pressed', 'false');
+  await expect(power).toHaveAccessibleName('未使能');
+  await power.click();
+  await expect(power).toHaveAttribute('aria-pressed', 'true');
+  expect(powerCommands).toEqual(['/api/robot/disable', '/api/robot/enable']);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('button', { name: '上传并运行' })).toBeDisabled();
+  await expect(power).toBeDisabled();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator('.teach-sidebar').getByRole('link', { name: '系统设置' }).click();
+  await page.getByRole('tab', { name: '控制器连接', exact: true }).click();
+  await page.getByRole('button', { name: '断开', exact: true }).click();
+  await expect(page.getByText('确定要断开 127.0.0.1:8080 吗？', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /^确\s*定$/ }).click();
+  await expect(page.getByRole('main').getByRole('button', { name: '连接', exact: true })).toBeVisible();
+  await expect(power).toBeDisabled();
 });
 
 
@@ -163,9 +206,52 @@ test('logo toggles a full-height sidebar and remembers the icon layout', async (
   expect(scene!.y + scene!.height).toBeLessThanOrEqual(workspace!.y + workspace!.height);
   await page.keyboard.press('Escape');
   await expect(page.locator('.teach-3d-expanded')).toHaveCount(0);
-  await page.getByRole('button', { name: '界面语言' }).click();
+  await page.locator('.teach-sidebar').getByRole('link', { name: '系统设置' }).click();
+  await page.getByRole('radiogroup', { name: '界面语言' }).getByText('English', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
   for (const name of ['Run', 'Pause', 'Stop']) {
     await expect(page.locator('.teach-controlbar').getByRole('button', { name, exact: true })).toBeVisible();
   }
 });
+
+for (const language of ['zh', 'en']) {
+  test(`realtime readouts fit without scroll and point actions stay inset (${language})`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.addInitScript((language) => localStorage.setItem('rocos-ui', JSON.stringify({ state: { language, sidebarCollapsed: false }, version: 0 })), language);
+    for (const [width, height] of [[1920, 1200], [1440, 1000], [1366, 768], [1920, 720], [1024, 768], [390, 844], [844, 390]]) {
+      await page.setViewportSize({ width, height });
+      await page.goto('/#/teaching');
+      await expect(page.locator('.teach-context-actions')).toBeVisible();
+      if (width < 600) await page.getByRole('button', { name: language === 'zh' ? '收起侧边栏' : 'Collapse sidebar' }).click();
+      const actions = page.locator('.teach-context-actions');
+      for (let toggle = 0; toggle < 2; toggle++) {
+        await expect.poll(() => actions.locator('button').evaluateAll((buttons) => {
+          const card = document.querySelector('.teach-context')!.getBoundingClientRect();
+          return buttons.every((button) => {
+            const b = button.getBoundingClientRect();
+            return b.height >= 44 && b.width >= 44 && b.top - card.top >= 7 && card.right - b.right >= 7 && card.bottom - b.bottom >= 7;
+          });
+        })).toBe(true);
+        await actions.locator('button').last().click();
+      }
+      let body = page.locator('.teach-state-column .teach-card-body');
+      const drawer = !(await body.isVisible());
+      if (drawer) {
+        await page.getByRole('button', { name: language === 'zh' ? '状态详情' : 'State details', exact: true }).click();
+        body = page.locator('.teach-state-drawer .ant-drawer-body');
+      }
+      await expect(body.locator('.teach-joint-row')).toHaveCount(7);
+      await expect(body.locator('.teach-pose-grid > div')).toHaveCount(6);
+      await expect.poll(() => body.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        return el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1
+          && Array.from(el.querySelectorAll('.teach-joint-row, .teach-pose-grid > div, .teach-card-footnote')).every((row) => {
+            const r = row.getBoundingClientRect();
+            return r.top >= box.top && r.bottom <= box.bottom && r.left >= box.left && r.right <= box.right
+              && row.scrollHeight <= row.clientHeight + 1 && row.scrollWidth <= row.clientWidth + 1;
+          });
+      }), `readout content fits at ${width}x${height}`).toBe(true);
+      if (drawer) await page.locator('.teach-state-drawer .ant-drawer-close').click();
+    }
+  });
+}

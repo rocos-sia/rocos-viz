@@ -20,7 +20,7 @@ export function Toolbar({ onShowConnect, onShowAbout }: ToolbarProps) {
           borderRadius: 4,
           padding: '4px 12px',
           cursor: 'pointer',
-          fontSize: 13,
+          fontSize: 'var(--font-body)',
         }}
       >
         {isConnected ? '● Connected' : '○ Connect'}
@@ -35,7 +35,7 @@ export function Toolbar({ onShowConnect, onShowAbout }: ToolbarProps) {
           borderRadius: 4,
           padding: '4px 8px',
           cursor: 'pointer',
-          fontSize: 12,
+          fontSize: 'var(--font-caption)',
         }}
       >
         About

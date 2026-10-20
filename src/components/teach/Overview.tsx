@@ -1,3 +1,4 @@
+import { useUnits } from '@/stores/unitStore';
 import { Progress } from 'antd';
 import { ArrowRightOutlined, CheckCircleOutlined, FileTextOutlined, RobotOutlined } from '@ant-design/icons';
 import { Link } from 'react-router';
@@ -7,7 +8,10 @@ import { demoJoints, demoPosition, demoPrograms, useTeachStore } from '@/stores/
 import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
 import { Euler, Quaternion } from 'three';
+import { RobotOverview } from './RobotOverview';
 import { FRAME } from '@/core/constants';
+import { useJointRanges } from '@/hooks/useJointRanges';
+import { jointBarRange } from '@/core/JointRange';
 
 export function useDisplayRobot(frame: number = FRAME.BASE) {
   const connected = useConnectionStore((s) => s.isConnected);
@@ -23,43 +27,52 @@ export function useDisplayRobot(frame: number = FRAME.BASE) {
   };
 }
 
-export function JointReadout({ values }: { values?: number[] } = {}) {
+export function JointReadout({ values, urdfContent }: { values?: number[]; urdfContent?: string | null } = {}) {
+  const units = useUnits();
   const robot = useDisplayRobot();
+  const ranges = useJointRanges(urdfContent, robot.connected);
   const joints = values ?? robot.joints;
   const t = useT();
   return <div className="teach-joint-readout">
     <div className="teach-table-heading"><span>{t('teach.joint')}</span><span>{t('teach.position')}</span></div>
-    {joints.map((value, index) => <div className="teach-joint-row" key={index}>
-      <span>J{index + 1}</span><div className="teach-joint-track"><i style={{ width: `${Math.min(100, Math.abs(value) / 180 * 100 + 4)}%` }} /></div>
-      <strong>{value.toFixed(2)}<small> °</small></strong>
-    </div>)}
+    {joints.map((angle, index) => {
+      const name = robot.connected ? robot.state?.joint_states[index]?.name : `joint_${index + 1}`;
+      const range = name ? ranges[name] : undefined;
+      const isLinear = range?.unit === 'mm';
+      const display = isLinear ? units.length : units.angle;
+      const conversion = isLinear ? display.factor / 1000 : display.factor * Math.PI / 180;
+      const unit = display.label;
+      const value = values === undefined && robot.connected && isLinear
+        ? (robot.state?.joint_states[index]?.position ?? 0) * 1000 : angle;
+      const bar = jointBarRange(value, range);
+      const description = t(bar.limited ? 'teach.jointLimit' : 'teach.jointReference', {
+        min: (bar.lower * conversion).toFixed(2), max: (bar.upper * conversion).toFixed(2), unit,
+      });
+      return <div className="teach-joint-row" key={index}>
+        <span>J{index + 1}</span><div className="teach-joint-track" role="img" aria-label={description} title={description}>
+          <i className={value < 0 ? 'negative' : 'positive'} style={{ left: `${bar.left}%`, width: `${bar.width}%` }} />
+          <b className="teach-joint-zero" style={{ left: `${bar.zero}%` }} aria-hidden="true" />
+        </div>
+        <strong>{(value * conversion).toFixed(unit === 'rad' || unit === 'm' ? 4 : 2)}<small> {unit}</small></strong>
+      </div>;
+    })}
     {!joints.length && <div className="teach-empty">{t('teach.noData')}</div>}
   </div>;
 }
 
 export function PoseReadout({ frame, values }: { frame?: number; values?: number[] } = {}) {
+  const units = useUnits();
   const { position, rotation } = useDisplayRobot(frame);
   const t = useT();
   return <>
     <div className="teach-pose-grid">{['X', 'Y', 'Z', 'RX', 'RY', 'RZ'].map((axis, i) => {
       const value = values ? values[i] : i < 3 ? position[i] : rotation[i - 3];
-      return <div key={axis}><span>{axis}</span><strong>{value?.toFixed(3) ?? '—'}</strong><small>{i < 3 ? 'mm' : '°'}</small></div>;
+      const display = i < 3 ? units.length : units.angle;
+      const conversion = i < 3 ? display.factor / 1000 : display.factor * Math.PI / 180;
+      return <div key={axis}><span>{axis}</span><strong>{value !== undefined ? (value * conversion).toFixed(3) : '—'}</strong><small>{display.label}</small></div>;
     })}</div>
     <div className="teach-card-footnote">{frame === undefined ? t('teach.flangeBase') : t('teach.frameReadout', { frame: t(frame === FRAME.TOOL ? 'frame.TOOL' : frame === FRAME.OBJECT ? 'frame.OBJECT' : frame === FRAME.FLANGE ? 'frame.FLANGE' : 'frame.BASE') })}</div>
   </>;
-}
-
-export function RobotGlyph() {
-  return <svg className="teach-robot-glyph" viewBox="0 0 280 240" aria-hidden="true">
-    <defs><linearGradient id="robotSteel" x2="1" y2="1"><stop stopColor="#f8fafc" /><stop offset="1" stopColor="#a8b9ce" /></linearGradient></defs>
-    <ellipse cx="138" cy="219" rx="87" ry="12" fill="#e2e8f0" />
-    <path d="M94 210 L110 192 H158 L176 210 L163 220 H109Z" fill="#192b45" />
-    <path d="M132 196 L132 146 L80 105 L115 53 L191 73 L199 110" fill="none" stroke="#bcc9d8" strokeWidth="31" strokeLinejoin="round" />
-    <path d="M132 195 L132 145 L80 104 L115 52 L190 72 L199 107" fill="none" stroke="url(#robotSteel)" strokeWidth="24" strokeLinejoin="round" />
-    {[[132, 145], [80, 104], [115, 52], [191, 73]].map(([x, y]) => <g key={x}><circle cx={x} cy={y} r="17" fill="#2563eb" /><circle cx={x} cy={y} r="11" fill="#dbeafe" /><circle cx={x} cy={y} r="6" fill="#192b45" /></g>)}
-    <path d="M190 109h19v14h-19z M190 123v12m19-12v12" fill="#192b45" stroke="#192b45" strokeWidth="5" />
-    <text x="122" y="185" fill="#2563eb" fontSize="9" transform="rotate(-90 122 185)">ROCOS</text>
-  </svg>;
 }
 
 export function ProgramList({ onSelect }: { onSelect?: (name: string) => void }) {
@@ -74,21 +87,16 @@ export function IOSummary() {
   return <div className="teach-io-summary">{['DI', 'DO'].map((type) => <div key={type}><strong>{type}</strong><div>{Array.from({ length: 8 }, (_, i) => <span className={(type === 'DI' ? i % 3 === 0 : outputs[i]) ? 'on' : ''} key={i}>{i}<i /></span>)}</div></div>)}</div>;
 }
 
-export function Overview() {
+export function Overview({ urdfContent }: { urdfContent: string | null }) {
   const t = useT();
-  const { connected, state, joints } = useDisplayRobot();
+  const { connected } = useDisplayRobot();
   const step = useTeachStore((s) => s.demoStep);
   return <div className="teach-dashboard" data-motion>
     <TeachCard title={t('teach.robotStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary">
-      <div className="teach-robot-overview"><RobotGlyph /><div>
-        <span className="teach-eyebrow">{connected ? t('teach.controller') : t('teach.demoRobot')}</span>
-        <h3>{connected ? 'ROCOS' : 'ROCOS-07'}</h3>
-        <p><span className="teach-status neutral">{connected ? state?.robot_state ?? t('teach.unknown') : t('teach.offline')}</span></p>
-        <dl><dt>{t('teach.dof')}</dt><dd>{joints.length || '—'}</dd><dt>{t('teach.source')}</dt><dd>{connected ? t('teach.live') : t('teach.demo')}</dd></dl>
-      </div></div>
+      <RobotOverview urdfContent={urdfContent} />
       <Link className="teach-card-link" to="/teaching">{t('teach.openTeaching')} <ArrowRightOutlined /></Link>
     </TeachCard>
-    <TeachCard title={t('teach.jointStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary"><JointReadout /></TeachCard>
+    <TeachCard title={t('teach.jointStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary"><JointReadout urdfContent={urdfContent} /></TeachCard>
     <TeachCard title={t('teach.pose')} extra={!connected && <DemoBadge />} className="dashboard-primary"><PoseReadout /></TeachCard>
     <TeachCard title={t('teach.recentPrograms')} extra={<DemoBadge />}><ProgramList /><Link className="teach-card-link" to="/programming">{t('teach.allPrograms')} <ArrowRightOutlined /></Link></TeachCard>
     <TeachCard title={t('teach.execution')} extra={<DemoBadge />}>

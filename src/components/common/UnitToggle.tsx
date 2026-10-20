@@ -1,13 +1,13 @@
+import { useUnitStore } from '@/stores/unitStore';
 import { Button, Tooltip } from 'antd';
-import { useControlStore } from '@/stores/controlStore';
 import { useT } from '@/i18n/useT';
 
 export function UnitToggle() {
   const t = useT();
-  const isDegree = useControlStore((s) => s.isDegree);
-  const isMM = useControlStore((s) => s.isMM);
-  const toggleDegree = useControlStore((s) => s.toggleDegree);
-  const toggleMM = useControlStore((s) => s.toggleMM);
+  const isDegree = useUnitStore((s) => s.isDegree);
+  const isMM = useUnitStore((s) => s.isMM);
+  const toggleDegree = useUnitStore((s) => s.toggleDegree);
+  const toggleMM = useUnitStore((s) => s.toggleMM);
 
   return (
     <div style={{ display: 'flex', gap: 4 }}>

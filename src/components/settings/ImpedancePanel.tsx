@@ -1,3 +1,4 @@
+import { useUnits } from '@/stores/unitStore';
 import { useState, useCallback, useRef } from 'react';
 import { Button, InputNumber, Slider, Radio, Spin, message, Divider } from 'antd';
 import {
@@ -53,6 +54,7 @@ function defaultState(): LocalState {
 // ─── Param Row ───────────────────────────────────────────────────────────────
 
 interface ParamRowProps {
+  linear?: boolean;
   label: string;
   stiffness: number;
   damping: number;
@@ -62,52 +64,58 @@ interface ParamRowProps {
   dampingLabel: string;
 }
 
-function ParamRow({ label, stiffness, damping, onStiffnessChange, onDampingChange, stiffnessLabel, dampingLabel }: ParamRowProps) {
+function ParamRow({ linear = false, label, stiffness, damping, onStiffnessChange, onDampingChange, stiffnessLabel, dampingLabel }: ParamRowProps) {
+  const units = useUnits();
+  const numerator = linear ? units.force : units.torque;
+  const denominator = linear ? units.length : units.angle;
+  const factor = numerator.factor / denominator.factor;
+  const unit = `${numerator.label}/${denominator.label}`;
+  const dampingUnit = `${numerator.label}·s/${denominator.label}`;
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+      <div style={{ fontSize: 'var(--font-body)', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 12, flexShrink: 0, minWidth: 26 }}>{stiffnessLabel}</span>
+      <div className="teach-impedance-inputs">
+        <span style={{ fontSize: 'var(--font-body)', flexShrink: 0, minWidth: 26 }}>{stiffnessLabel} ({unit})</span>
         <InputNumber
-          value={stiffness}
-          min={STIFFNESS_MIN}
-          max={STIFFNESS_MAX}
-          step={1}
-          precision={2}
+          value={stiffness * factor}
+          min={STIFFNESS_MIN * factor}
+          max={STIFFNESS_MAX * factor}
+          step={factor}
+          precision={6}
           size="small"
           style={{ width: 88 }}
-          onChange={(v) => v !== null && onStiffnessChange(v)}
+          onChange={(v) => v !== null && onStiffnessChange(v / factor)}
         />
         <Slider
-          value={stiffness}
-          min={STIFFNESS_MIN}
-          max={STIFFNESS_MAX}
-          step={1}
+          value={stiffness * factor}
+          min={STIFFNESS_MIN * factor}
+          max={STIFFNESS_MAX * factor}
+          step={factor}
           style={{ flex: 1, minWidth: 60 }}
           tooltip={{ formatter: (v) => `${v?.toFixed(2)}` }}
-          onChange={onStiffnessChange}
+          onChange={(v) => onStiffnessChange(v / factor)}
         />
-        <span style={{ fontSize: 12, flexShrink: 0, minWidth: 34 }}>{dampingLabel}</span>
+        <span style={{ fontSize: 'var(--font-body)', flexShrink: 0, minWidth: 34 }}>{dampingLabel} ({dampingUnit})</span>
         <InputNumber
-          value={damping}
-          min={DAMPING_MIN}
-          max={DAMPING_MAX}
-          step={0.01}
-          precision={2}
+          value={damping * factor}
+          min={DAMPING_MIN * factor}
+          max={DAMPING_MAX * factor}
+          step={0.01 * factor}
+          precision={6}
           size="small"
           style={{ width: 72 }}
-          onChange={(v) => v !== null && onDampingChange(v)}
+          onChange={(v) => v !== null && onDampingChange(v / factor)}
         />
         <Slider
-          value={damping}
-          min={DAMPING_MIN}
-          max={DAMPING_MAX}
-          step={0.01}
+          value={damping * factor}
+          min={DAMPING_MIN * factor}
+          max={DAMPING_MAX * factor}
+          step={0.01 * factor}
           style={{ flex: 1, minWidth: 60 }}
           tooltip={{ formatter: (v) => `${v?.toFixed(2)}` }}
-          onChange={onDampingChange}
+          onChange={(v) => onDampingChange(v / factor)}
         />
       </div>
     </div>
@@ -126,7 +134,7 @@ function SectionHeader({ title, extra }: { title: string; extra?: React.ReactNod
       paddingBottom: 8,
       borderBottom: '1px solid var(--color-border)',
     }}>
-      <span style={{ fontWeight: 600, fontSize: 14 }}>{title}</span>
+      <span style={{ fontWeight: 600, fontSize: 'var(--font-body)' }}>{title}</span>
       {extra}
     </div>
   );
@@ -335,6 +343,7 @@ export function ImpedancePanel() {
               <ParamRow
                 key={key}
                 label={label}
+                linear={group === 'translational'}
                 stiffness={state[group].stiffness}
                 damping={state[group].damping}
                 stiffnessLabel={stiffnessLabel}

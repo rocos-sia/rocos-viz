@@ -19,7 +19,7 @@ export function FrameSelector() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <Text style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{t('frame.label')}:</Text>
+      <Text style={{ fontSize: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>{t('frame.label')}:</Text>
       <Select
         aria-label={t('frame.label')}
         value={currentFrame}

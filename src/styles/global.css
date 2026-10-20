@@ -190,7 +190,7 @@ html, body, #root {
   border-radius: 20px;
   border: 1px solid var(--color-border);
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 500;
   letter-spacing: 0.01em;
   transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
@@ -209,7 +209,7 @@ html, body, #root {
 }
 
 .conn-pill .conn-action {
-  font-size: 13px;
+  font-size: var(--font-body);
   opacity: 0.6;
   margin-left: 2px;
 }
@@ -301,13 +301,13 @@ html, body, #root {
 }
 
 .scene-error-title {
-  font-size: 18px;
+  font-size: var(--font-title);
   font-weight: 600;
 }
 
 .scene-error-hint {
   max-width: 460px;
-  font-size: 14px;
+  font-size: var(--font-body);
   line-height: 1.6;
   color: var(--color-text-secondary);
 }
@@ -316,7 +316,7 @@ html, body, #root {
   max-width: 460px;
   margin-top: 4px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--font-caption);
   font-family: AlibabaPuHuiTi;
   color: var(--color-text-secondary);
   background: var(--color-bg-surface);
@@ -415,7 +415,7 @@ html, body, #root {
   padding: 5px 14px;
   background: var(--color-status-bar-bg);
   border-top: 1px solid var(--color-border);
-  font-size: 13px;
+  font-size: var(--font-body);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
@@ -450,7 +450,7 @@ html, body, #root {
 }
 
 .panel-section-header {
-  font-size: 12px;
+  font-size: var(--font-section);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -502,7 +502,7 @@ html, body, #root {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 600;
 }
 
@@ -520,7 +520,7 @@ html, body, #root {
 
 .jog-item .jog-label {
   width: 28px;
-  font-size: 14px;
+  font-size: var(--font-body);
   font-weight: 600;
   color: var(--color-text-secondary);
   text-align: right;
@@ -529,7 +529,7 @@ html, body, #root {
 
 .jog-item .jog-value {
   width: 78px;
-  font-size: 14px;
+  font-size: var(--font-body);
   color: var(--color-text);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -604,7 +604,7 @@ html, body, #root {
 }
 
 .precise-group-title {
-  font-size: 12px;
+  font-size: var(--font-section);
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 10px;
@@ -644,7 +644,7 @@ html, body, #root {
 }
 
 .precise-field-label {
-  font-size: 13px;
+  font-size: var(--font-body);
   font-weight: 600;
   color: var(--color-text-secondary);
   width: 26px;
@@ -672,7 +672,7 @@ html, body, #root {
 }
 
 .precise-field-unit {
-  font-size: 12px;
+  font-size: var(--font-caption);
   color: var(--color-text-secondary);
   width: 26px;
   flex-shrink: 0;
@@ -779,7 +779,7 @@ html, body, #root {
 }
 
 .robot-reset-btn .robot-reset-label {
-  font-size: 12px;
+  font-size: var(--font-caption);
   font-weight: 600;
   letter-spacing: 0.03em;
   line-height: 1;
@@ -877,7 +877,7 @@ html, body, #root {
 .toolbar-center .enable-pill {
   height: 40px;
   padding: 0 22px;
-  font-size: 14px;
+  font-size: var(--font-body);
   font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
@@ -967,7 +967,7 @@ html, body, #root {
   border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -1044,7 +1044,7 @@ html, body, #root {
 }
 
 .plot-float-title {
-  font-size: 14px;
+  font-size: var(--font-section);
   font-weight: 500;
   color: var(--color-text);
 }

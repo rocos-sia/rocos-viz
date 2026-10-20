@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 interface ConnectionState {
   host: string;
   port: string;
+  autoLoadModel: boolean;
   isConnected: boolean;
   isRobotEnabled: boolean;
   /** 当前持有的控制权 token，null 表示未持有 */
@@ -28,6 +29,7 @@ export const useConnectionStore = create<ConnectionState>()(
     (set) => ({
       host: window.location.hostname,
       port: '8080',
+      autoLoadModel: true,
       isConnected: false,
       isRobotEnabled: false,
       controlToken: null,

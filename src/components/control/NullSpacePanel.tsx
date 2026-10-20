@@ -22,7 +22,7 @@ export function NullSpacePanel() {
   const dof = robotState?.joint_states?.length ?? 0;
   const nullDims = Math.max(0, dof - 6);
 
-  if (nullDims === 0) return null;
+  if (nullDims === 0) return <p className="teach-muted">{t('teach.noNullSpace')}</p>;
 
   const dims = Array.from({ length: nullDims }, (_, i) => ({
     label: `N${i + 1}`,
@@ -70,7 +70,8 @@ function NullSpaceJogItem({ label, dimIndex, nullDims }: NullSpaceJogItemProps) 
       <span className="jog-label" style={{ width: 24 }}>{label}</span>
 
       <Button
-        className="jog-btn"
+        className="jog-btn jog-negative"
+        aria-label={`${label} −`}
           {...bind(-1)}
       >
         −
@@ -79,7 +80,8 @@ function NullSpaceJogItem({ label, dimIndex, nullDims }: NullSpaceJogItemProps) 
       <span className="jog-value" style={{ flex: 1, textAlign: 'right' }}>0.00</span>
 
       <Button
-        className="jog-btn"
+        className="jog-btn jog-positive"
+        aria-label={`${label} +`}
           {...bind(1)}
       >
         +

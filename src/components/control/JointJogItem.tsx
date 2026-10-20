@@ -1,3 +1,4 @@
+import { useUnitStore } from '@/stores/unitStore';
 import { useHeldJog } from '@/hooks/useHeldJog';
 import { useCallback } from 'react';
 import { Button, Tooltip } from 'antd';
@@ -19,7 +20,7 @@ interface JointJogItemProps {
 
 export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJogItemProps) {
   const t = useT();
-  const isDegree = useControlStore((s) => s.isDegree);
+  const isDegree = useUnitStore((s) => s.isDegree);
   const speedFactor = useControlStore((s) => s.speedFactor);
 
   const displayValue = isDegree
@@ -45,7 +46,8 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
 
       <Tooltip title={t('jog.negative')}>
         <Button
-          className="jog-btn"
+          className="jog-btn jog-negative"
+          aria-label={`J${index + 1} −`}
           {...bind(-1)}
         >
           −
@@ -62,7 +64,8 @@ export function JointJogItem({ index, joint, jointCount = MAX_JOINTS }: JointJog
 
       <Tooltip title={t('jog.positive')}>
         <Button
-          className="jog-btn"
+          className="jog-btn jog-positive"
+          aria-label={`J${index + 1} +`}
           {...bind(1)}
         >
           +

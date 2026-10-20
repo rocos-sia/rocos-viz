@@ -15,7 +15,7 @@ export function JointJogPanel() {
           <JointJogItem key={`joint_${i}`} index={i} joint={joint} jointCount={joints.length} />
         ))}
         {joints.length === 0 && (
-          <div style={{ padding: '8px 0', color: 'var(--color-text-secondary)', fontSize: 13, textAlign: 'center' }}>
+          <div style={{ padding: '8px 0', color: 'var(--color-text-secondary)', fontSize: 'var(--font-body)', textAlign: 'center' }}>
             {t('jog.noJointData')}
           </div>
         )}

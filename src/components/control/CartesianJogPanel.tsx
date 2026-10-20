@@ -4,6 +4,7 @@ import { useControlStore } from '@/stores/controlStore';
 import { useT } from '@/i18n/useT';
 import { FRAME } from '@/core/constants';
 import * as THREE from 'three';
+import { CartesianJogLayout } from './CartesianJogLayout';
 
 function quaternionToRPY(q: { x: number; y: number; z: number; w: number }) {
   const euler = new THREE.Euler().setFromQuaternion(
@@ -46,6 +47,13 @@ export function CartesianJogPanel({ compact = false }: { compact?: boolean }) {
   const pose = getPoseData();
   const rpy = pose ? quaternionToRPY(pose.orientation) : { roll: 0, pitch: 0, yaw: 0 };
   const frameName = frameToName(currentFrame);
+
+  if (compact) {
+    const values = [pose?.position.x ?? 0, pose?.position.y ?? 0, pose?.position.z ?? 0, rpy.roll, rpy.pitch, rpy.yaw];
+    return <CartesianJogLayout renderAxis={(i) => <CartesianJogItem key={i}
+      showValue={false} label={['X', 'Y', 'Z', 'RX', 'RY', 'RZ'][i]} value={values[i]}
+      frameName={frameName} freedom={i} unit={i < 3 ? 'mm' : 'deg'} isPosition={i < 3} />} />;
+  }
 
   const getFrameLabel = () => {
     switch (currentFrame) {

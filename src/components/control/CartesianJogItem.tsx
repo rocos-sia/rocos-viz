@@ -1,6 +1,8 @@
+import { useUnitStore } from '@/stores/unitStore';
 import { useHeldJog } from '@/hooks/useHeldJog';
 import { useCallback } from 'react';
 import { Button } from 'antd';
+import { RedoOutlined, UndoOutlined } from '@ant-design/icons';
 import { useControlStore } from '@/stores/controlStore';
 import {
   JOG_COMMAND_TIMEOUT_S,
@@ -29,8 +31,8 @@ function frameToJogFrame(frameName: string): 'BASE' | 'FLANGE' | 'TOOL' | 'OBJEC
 }
 
 export function CartesianJogItem({ label, value, frameName, freedom, isPosition, showValue = true }: CartesianJogItemProps) {
-  const isMM = useControlStore((s) => s.isMM);
-  const isDegree = useControlStore((s) => s.isDegree);
+  const isMM = useUnitStore((s) => s.isMM);
+  const isDegree = useUnitStore((s) => s.isDegree);
   const speedFactor = useControlStore((s) => s.speedFactor);
 
   const displayValue = isPosition
@@ -54,14 +56,14 @@ export function CartesianJogItem({ label, value, frameName, freedom, isPosition,
 
   return (
     <div className="jog-item">
-      <span className="jog-label" style={{ width: 24 }}>{label}</span>
+      <span className="jog-label" data-axis={['X', 'Y', 'Z'][freedom % 3]}>{label}</span>
 
       <Button
-        className="jog-btn"
+        className="jog-btn jog-negative"
         aria-label={`${label} −`}
           {...bind(-1)}
       >
-        −
+        {!isPosition && <RedoOutlined aria-hidden="true" />}−
       </Button>
 
       {showValue && <span className="jog-value" style={{ flex: 1, textAlign: 'right' }}>
@@ -69,11 +71,11 @@ export function CartesianJogItem({ label, value, frameName, freedom, isPosition,
       </span>}
 
       <Button
-        className="jog-btn"
+        className="jog-btn jog-positive"
         aria-label={`${label} +`}
           {...bind(1)}
       >
-        +
+        {!isPosition && <UndoOutlined aria-hidden="true" />}+
       </Button>
     </div>
   );

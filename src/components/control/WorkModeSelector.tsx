@@ -27,15 +27,16 @@ export function WorkModeSelector() {
     try {
       await client.setWorkMode(mode);
       message.success(t('mode.switched', { mode: modeLabel(mode) }));
-    } catch (error: any) {
-      message.error(t('mode.switchFailed', { msg: error.message }));
+    } catch (error: unknown) {
+      message.error(t('mode.switchFailed', { msg: error instanceof Error ? error.message : String(error) }));
     }
   };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{t('mode.label')}:</span>
+      <span style={{ fontSize: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>{t('mode.label')}:</span>
       <Select
+        aria-label={t('mode.label')}
         value={workMode || 'position'}
         onChange={handleChange}
         options={WORK_MODES.map((m) => ({ value: m.value, label: modeLabel(m.value) }))}

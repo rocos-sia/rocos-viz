@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 import { Button, Tooltip, message } from 'antd';
+import { ThunderboltFilled } from '@ant-design/icons';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
 
-export function EnableButton() {
+export function EnableButton({ iconOnly = false, disabled = false }: { iconOnly?: boolean; disabled?: boolean }) {
   const t = useT();
   const isConnected = useConnectionStore((s) => s.isConnected);
   const isEnabled = useConnectionStore((s) => s.isRobotEnabled);
@@ -30,22 +31,28 @@ export function EnableButton() {
         setEnabled(true);
         message.success(t('enable.didEnable'));
       }
-    } catch (error: any) {
-      message.error(t('enable.opFailed', { msg: error.message }));
+    } catch (error: unknown) {
+      message.error(t('enable.opFailed', { msg: error instanceof Error ? error.message : String(error) }));
     }
   }, [isConnected, isEnabled, host, port, setEnabled, t]);
 
+  const active = isConnected && isEnabled;
+  const status = t(active ? 'enable.enabled' : 'enable.disabled');
+  const action = t(active ? 'enable.disableTip' : 'enable.enableTip');
+
   return (
-    <Tooltip title={isEnabled ? t('enable.disableTip') : t('enable.enableTip')}>
+    <Tooltip title={`${status} · ${action}`} trigger={['hover', 'focus']}>
       <Button
-        className={`enable-pill${isEnabled ? ' is-enabled' : ' is-disabled'}`}
-        icon={<span className={`enable-dot ${isEnabled ? 'on' : 'off'}`} />}
+        className={`${iconOnly ? 'teach-enable-icon' : 'enable-pill'}${active ? ' is-enabled' : ' is-disabled'}`}
+        aria-label={status}
+        aria-pressed={active}
+        icon={iconOnly ? <ThunderboltFilled aria-hidden="true" /> : <span className={`enable-dot ${active ? 'on' : 'off'}`} />}
         onClick={handleToggle}
-        disabled={!isConnected || !controlToken}
-        shape="round"
+        disabled={disabled || !isConnected || !controlToken}
+        shape={iconOnly ? 'default' : 'round'}
         size="middle"
       >
-        {isEnabled ? t('enable.enabled') : t('enable.disabled')}
+        {iconOnly ? null : status}
       </Button>
     </Tooltip>
   );

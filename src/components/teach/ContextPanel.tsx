@@ -1,3 +1,4 @@
+import { useUnits } from '@/stores/unitStore';
 import { useState } from 'react';
 import { Button, Input, Modal, Popconfirm, Tabs, Tooltip, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
@@ -10,6 +11,7 @@ import { IOSummary, ProgramList } from './Overview';
 
 export function ContextPanel() {
   const t = useT();
+  const units = useUnits();
   const points = useTeachStore((s) => s.points);
   const addPoint = useTeachStore((s) => s.addPoint);
   const renamePoint = useTeachStore((s) => s.renamePoint);
@@ -35,9 +37,9 @@ export function ContextPanel() {
       <Tooltip title={t(collapsed ? 'teach.expand' : 'teach.collapse')}><Button aria-label={t(collapsed ? 'teach.expand' : 'teach.collapse')} icon={collapsed ? <UpOutlined /> : <DownOutlined />} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="teach-context-button-label">{t(collapsed ? 'teach.expand' : 'teach.collapse')}</span></Button></Tooltip>
     </div>} items={[
       { key: 'points', label: `${t('teach.points')} (${points.length})`, children: <div className="teach-table-scroll">
-        <div className="teach-context-caption">{t('teach.localPoints')}</div>
-        <table className="teach-table"><thead><tr><th>ID</th><th>{t('teach.name')}</th><th>X (mm)</th><th>Y (mm)</th><th>Z (mm)</th><th>{t('teach.source')}</th><th>{t('teach.actions')}</th></tr></thead>
-          <tbody>{points.map((p, i) => <tr key={p.id}><td><span className="teach-point-index">{String(i + 1).padStart(2, '0')}</span></td><td>{p.name}</td>{p.position.map((v, j) => <td key={j}>{v.toFixed(3)}</td>)}<td>{p.source === 'demo' ? <DemoBadge /> : t('teach.captured')}</td><td>
+        <div className="teach-context-caption">{t('teach.localPoints', { unit: units.length.label })}</div>
+        <table className="teach-table"><thead><tr><th>ID</th><th>{t('teach.name')}</th><th>X ({units.length.label})</th><th>Y ({units.length.label})</th><th>Z ({units.length.label})</th><th>{t('teach.source')}</th><th>{t('teach.actions')}</th></tr></thead>
+          <tbody>{points.map((p, i) => <tr key={p.id}><td><span className="teach-point-index">{String(i + 1).padStart(2, '0')}</span></td><td>{p.name}</td>{p.position.map((v, j) => <td key={j}>{(v / 1000 * units.length.factor).toFixed(3)}</td>)}<td>{p.source === 'demo' ? <DemoBadge /> : t('teach.captured')}</td><td>
             <Button type="text" aria-label={t('teach.rename')} icon={<EditOutlined />} onClick={() => { setEdit(p); setName(p.name); }} />
             <Popconfirm title={t('teach.deletePoint')} onConfirm={() => deletePoint(p.id)}><Button type="text" danger aria-label={t('teach.deletePoint')} icon={<DeleteOutlined />} /></Popconfirm>
           </td></tr>)}</tbody></table>

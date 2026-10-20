@@ -1,3 +1,6 @@
+import { useUnitStore } from '@/stores/unitStore';
+import { chartUnit } from '@/core/Units';
+import { typography } from '@/styles/typography';
 import ReactECharts from 'echarts-for-react';
 import 'echarts/theme/v5';
 import { ChartConfig } from '@/stores/plotStore';
@@ -12,6 +15,8 @@ interface RealtimeChartProps {
 
 export function RealtimeChart({ config, data, onClick }: RealtimeChartProps) {
   const t = useT();
+  const units = useUnitStore();
+  const unit = chartUnit(config.dataSource, units);
   // ECharts renders to canvas, which cannot resolve CSS variables — resolve
   // theme-appropriate colors here so axis/title labels stay readable.
   const themeMode = useUIStore((s) => s.themeMode);
@@ -24,11 +29,11 @@ export function RealtimeChart({ config, data, onClick }: RealtimeChartProps) {
 
   const option = {
     animation: false,
-    textStyle: { fontFamily: 'AlibabaPuHuiTi' },
+    textStyle: { fontFamily: 'AlibabaPuHuiTi', fontSize: typography.body },
     title: {
       text: title,
       left: 'center',
-      textStyle: { fontSize: 12, color: textColor },
+      textStyle: { fontSize: typography.section, fontWeight: 600, color: textColor },
     },
     tooltip: {
       trigger: 'axis' as const,
@@ -41,21 +46,23 @@ export function RealtimeChart({ config, data, onClick }: RealtimeChartProps) {
     },
     xAxis: {
       type: 'time' as const,
-      axisLabel: { fontSize: 13, color: subTextColor, hideOverlap: true },
+      axisLabel: { fontSize: typography.caption, color: subTextColor, hideOverlap: true },
       axisLine: { lineStyle: { color: axisLineColor } },
     },
     yAxis: {
       type: 'value' as const,
+      name: unit.label,
+      nameTextStyle: { color: subTextColor, fontSize: typography.caption },
       scale: true,
-      axisLabel: { fontSize: 13, color: subTextColor, hideOverlap: true },
+      axisLabel: { fontSize: typography.caption, color: subTextColor, hideOverlap: true },
       axisLine: { lineStyle: { color: axisLineColor } },
       splitLine: { lineStyle: { color: axisLineColor, opacity: 0.4 } },
     },
     series: [
       {
-        name: title,
+        name: `${title} (${unit.label})`,
         type: 'line' as const,
-        data: data.map((d) => [d.timestamp, d.value]),
+        data: data.map((d) => [d.timestamp, d.value === null ? null : d.value * unit.factor]),
         id: String(config.id),
         showSymbol: false,
         connectNulls: false,

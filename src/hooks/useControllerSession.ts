@@ -11,6 +11,7 @@ export function useControllerSession() {
   const t = useT();
   const [urdfContent, setUrdfContent] = useState<string | null>(null);
   const isConnected = useConnectionStore((s) => s.isConnected);
+  const autoLoadModel = useConnectionStore((s) => s.autoLoadModel);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);
   // Mount the connection hook so polling / WebSocket starts when isConnected changes
@@ -165,9 +166,10 @@ export function useControllerSession() {
     return () => { cancelled = true; clearInterval(id); };
   }, [isConnected, host, port, setControlToken, setControlAcquiredAt, setControlOwner]);
 
-  // Fetch URDF model from controller on connect
+  // Fetch URDF only when enabled in connection settings.
   useEffect(() => {
-    if (!isConnected) {
+    setUrdfContent(null);
+    if (!isConnected || !autoLoadModel) {
       setUrdfContent(null);
       return;
     }
@@ -196,7 +198,7 @@ export function useControllerSession() {
     fetchModel();
 
     return () => { cancelled = true; };
-  }, [isConnected, host, port, t]);
+  }, [isConnected, host, port, autoLoadModel, t]);
 
   return { urdfContent, handleDisconnect, handleTakeover, controlOwnerName, controlOwnerIp };
 }

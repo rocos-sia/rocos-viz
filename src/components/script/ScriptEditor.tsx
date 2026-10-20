@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Button, Space, message, Card, Select } from 'antd';
+import { Button, Space, message, Card } from 'antd';
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -137,8 +137,8 @@ export function ScriptEditor() {
             color: '#e0e0e0',
             border: 'none',
             padding: 12,
-            fontFamily: 'monospace',
-            fontSize: 14,
+            fontFamily: 'AlibabaPuHuiTi',
+            fontSize: 'var(--font-body)',
             resize: 'none',
             outline: 'none',
           }}
@@ -159,8 +159,8 @@ export function ScriptEditor() {
             padding: 8,
             background: '#0a0a14',
             color: '#4ade80',
-            fontSize: 12,
-            fontFamily: 'monospace',
+            fontSize: 'var(--font-caption)',
+            fontFamily: 'AlibabaPuHuiTi',
             overflow: 'auto',
             maxHeight: 100,
             whiteSpace: 'pre-wrap',
