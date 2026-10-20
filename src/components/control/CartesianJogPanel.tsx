@@ -23,7 +23,7 @@ function frameToName(frame: number): string {
   }
 }
 
-export function CartesianJogPanel() {
+export function CartesianJogPanel({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const robotState = useRobotStateStore((s) => s.robotState);
   const currentFrame = useControlStore((s) => s.currentFrame);
@@ -64,6 +64,7 @@ export function CartesianJogPanel() {
       </div>
       <div>
         <CartesianJogItem
+          showValue={!compact}
           label="X"
           value={pose?.position.x || 0}
           frameName={frameName}
@@ -72,6 +73,7 @@ export function CartesianJogPanel() {
           isPosition={true}
         />
         <CartesianJogItem
+          showValue={!compact}
           label="Y"
           value={pose?.position.y || 0}
           frameName={frameName}
@@ -80,6 +82,7 @@ export function CartesianJogPanel() {
           isPosition={true}
         />
         <CartesianJogItem
+          showValue={!compact}
           label="Z"
           value={pose?.position.z || 0}
           frameName={frameName}
@@ -88,7 +91,8 @@ export function CartesianJogPanel() {
           isPosition={true}
         />
         <CartesianJogItem
-          label="R"
+          showValue={!compact}
+          label={compact ? 'RX' : 'R'}
           value={rpy.roll}
           frameName={frameName}
           freedom={3}
@@ -96,7 +100,8 @@ export function CartesianJogPanel() {
           isPosition={false}
         />
         <CartesianJogItem
-          label="P"
+          showValue={!compact}
+          label={compact ? 'RY' : 'P'}
           value={rpy.pitch}
           frameName={frameName}
           freedom={4}
@@ -104,7 +109,8 @@ export function CartesianJogPanel() {
           isPosition={false}
         />
         <CartesianJogItem
-          label="Y"
+          showValue={!compact}
+          label={compact ? 'RZ' : 'Y'}
           value={rpy.yaw}
           frameName={frameName}
           freedom={5}

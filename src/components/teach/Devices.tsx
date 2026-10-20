@@ -12,9 +12,9 @@ export function Devices() {
   const tool = useTeachStore((s) => s.tool);
   const [payload, setPayload] = useState<number | null>(tool.payload);
   const [name, setName] = useState(tool.name);
-  return <div data-motion>
+  return <div className="teach-page teach-devices" data-motion>
     <Alert className="teach-feature-notice" type="info" showIcon message={t('teach.pendingNotice')} />
-    <Tabs items={[
+    <Tabs className="teach-fill-tabs" items={[
       { key: 'digital', label: t('teach.digitalIO'), children: <div className="teach-two-col">
         {['inputs', 'outputs'].map((kind) => <TeachCard key={kind} title={t(kind === 'inputs' ? 'teach.inputs' : 'teach.outputs')} extra={<DemoBadge />}>
           <div className="teach-signal-grid">{Array.from({ length: 8 }, (_, index) => {

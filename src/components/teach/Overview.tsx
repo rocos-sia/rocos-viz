@@ -7,12 +7,14 @@ import { demoJoints, demoPosition, demoPrograms, useTeachStore } from '@/stores/
 import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
 import { Euler, Quaternion } from 'three';
+import { FRAME } from '@/core/constants';
 
-export function useDisplayRobot() {
+export function useDisplayRobot(frame: number = FRAME.BASE) {
   const connected = useConnectionStore((s) => s.isConnected);
   const state = useRobotStateStore((s) => s.robotState);
   const joints = connected ? state?.joint_states.map((j) => j.position * 180 / Math.PI) ?? [] : demoJoints;
-  const pose = state?.flange;
+  const pose = frame === FRAME.TOOL ? state?.active_tool_frame ?? state?.flange
+    : frame === FRAME.OBJECT ? state?.active_object_frame ?? state?.flange : state?.flange;
   const rpy = pose ? new Euler().setFromQuaternion(new Quaternion(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w), 'ZYX') : null;
   return {
     connected, state, joints,
@@ -35,15 +37,15 @@ export function JointReadout({ values }: { values?: number[] } = {}) {
   </div>;
 }
 
-export function PoseReadout() {
-  const { position, rotation } = useDisplayRobot();
+export function PoseReadout({ frame, values }: { frame?: number; values?: number[] } = {}) {
+  const { position, rotation } = useDisplayRobot(frame);
   const t = useT();
   return <>
     <div className="teach-pose-grid">{['X', 'Y', 'Z', 'RX', 'RY', 'RZ'].map((axis, i) => {
-      const value = i < 3 ? position[i] : rotation[i - 3];
+      const value = values ? values[i] : i < 3 ? position[i] : rotation[i - 3];
       return <div key={axis}><span>{axis}</span><strong>{value?.toFixed(3) ?? '—'}</strong><small>{i < 3 ? 'mm' : '°'}</small></div>;
     })}</div>
-    <div className="teach-card-footnote">{t('teach.flangeBase')}</div>
+    <div className="teach-card-footnote">{frame === undefined ? t('teach.flangeBase') : t('teach.frameReadout', { frame: t(frame === FRAME.TOOL ? 'frame.TOOL' : frame === FRAME.OBJECT ? 'frame.OBJECT' : frame === FRAME.FLANGE ? 'frame.FLANGE' : 'frame.BASE') })}</div>
   </>;
 }
 

@@ -21,6 +21,7 @@ export function FrameSelector() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <Text style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{t('frame.label')}:</Text>
       <Select
+        aria-label={t('frame.label')}
         value={currentFrame}
         onChange={setFrame}
         options={frameOptions}

@@ -34,8 +34,8 @@ export function Diagnostics() {
     const rows = data.flatMap((points, i) => points.map((p) => `${connected ? 'controller' : 'demo'},${getChartDataKey(charts[i].dataSource, charts[i].jointIndex)},${p.timestamp},${p.value ?? ''}`));
     downloadText('telemetry.csv', 'source,channel,timestamp_ms,value\n' + rows.join('\n'), 'text/csv');
   };
-  return <div data-motion>
-    <Tabs items={[
+  return <div className="teach-page teach-diagnostics" data-motion>
+    <Tabs className="teach-fill-tabs" items={[
       { key: 'curves', label: t('teach.charts'), children: <>
         <div className="teach-chart-toolbar"><div>{!connected && <DemoBadge />}<span className="teach-muted">{t('teach.chartHint')}</span></div><div className="teach-button-row">
           <Select aria-label={t('teach.channels')} value={chartCount} onChange={usePlotStore.getState().setChartCount} options={[4, 8, 16].map((value) => ({ value, label: `${value} ${t('teach.channels')}` }))} />

@@ -1,10 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Button, Dropdown, Popconfirm, Slider, Spin, message } from 'antd';
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
-import { AppstoreOutlined, AimOutlined, CodeOutlined, PlayCircleOutlined, ApiOutlined, LineChartOutlined, SettingOutlined, TranslationOutlined, DisconnectOutlined, MoreOutlined, StopFilled, PauseOutlined, CaretRightOutlined, SafetyCertificateOutlined, RobotOutlined } from '@ant-design/icons';
+import { Button, Popconfirm, Slider, Spin, Tooltip, message } from 'antd';
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router';
+import { AppstoreOutlined, AimOutlined, CodeOutlined, PlayCircleOutlined, ApiOutlined, LineChartOutlined, SettingOutlined, TranslationOutlined, DisconnectOutlined, PauseOutlined, CaretRightOutlined, SafetyCertificateOutlined, RobotOutlined } from '@ant-design/icons';
 import { useControllerSession } from '@/hooks/useControllerSession';
 import { useTelemetryCollector } from '@/hooks/useTelemetryCollector';
 import { useMotionScope } from '@/hooks/useMotionScope';
+import { useTeachStore } from '@/stores/teachStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
@@ -38,6 +39,8 @@ function StatusStrip() {
   const owner = useConnectionStore((s) => s.controlOwnerName);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const host = useConnectionStore((s) => s.host);
+  const toolFrame = useRobotStateStore((s) => s.robotState?.active_tool_frame_name);
+  const objectFrame = useRobotStateStore((s) => s.robotState?.active_object_frame_name);
   const mode = useRobotStateStore((s) => s.robotState?.work_mode);
   const speed = useControlStore((s) => s.speedFactor);
   return <div className="teach-status-strip">
@@ -49,6 +52,10 @@ function StatusStrip() {
     <div className="teach-status-cell"><small>{t('teach.safety')}</small><strong>{t('teach.unknown')}</strong></div>
     <div className="teach-status-cell"><small>{t('teach.speed')}</small><strong>{(speed * 100).toFixed(0)}%</strong></div>
     <div className="teach-status-cell"><small>{t('teach.alarms')}</small><strong>{t('teach.unknown')}</strong></div>
+    <div className="teach-frame-status">
+      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.TOOL')}{!connected && <span className="teach-frame-demo">{t('teach.demo')}</span>}</small><strong title={connected ? toolFrame || '—' : 'TCP_01'}>{connected ? toolFrame || '—' : 'TCP_01'}</strong></div>
+      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.OBJECT')}{!connected && <span className="teach-frame-demo">{t('teach.demo')}</span>}</small><strong title={connected ? objectFrame || '—' : 'Workpiece_01'}>{connected ? objectFrame || '—' : 'Workpiece_01'}</strong></div>
+    </div>
   </div>;
 }
 
@@ -85,10 +92,10 @@ function ControlBar() {
     <div className="teach-controlbar-state"><i className={connected ? 'connected' : ''} /><span>{connected ? status ?? t('teach.unknown') : t('teach.offline')}</span><small>{t(small ? 'teach.smallReadOnly' : 'teach.jogReason')}</small></div>
     <div className="teach-speed"><label>{t('teach.speed')}</label><Slider aria-label={t('teach.speed')} min={1} max={99} value={Math.round(speed * 100)} onChange={(v) => useControlStore.getState().setSpeedFactor(v / 100)} /><strong>{Math.round(speed * 100)}%</strong></div>
     <div className="teach-run-buttons">
-      <Button icon={<CaretRightOutlined />} disabled={!allowed || busy || status !== 'PAUSED'} onClick={() => void command('resume')}>{t('teach.resume')}</Button>
-      <Button icon={<PauseOutlined />} disabled={!allowed || busy || status !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
-      <Button danger icon={<StopFilled />} disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.softwareStop')}</Button>
-    </div><span className="teach-stop-note">{t('teach.notEstop')}</span>
+      <Button icon={<CaretRightOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'PAUSED'} onClick={() => void command('resume')}>{t('teach.run')}</Button>
+      <Button icon={<PauseOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
+      <Button danger icon={<span className="teach-stop-icon" aria-hidden="true" />} disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.stop')}</Button>
+    </div>
   </footer>;
 }
 
@@ -100,13 +107,13 @@ export function TeachShell() {
   const session = useControllerSession();
   useTelemetryCollector();
   const location = useLocation();
-  const navigate = useNavigate();
+  const reducedMotion = useTeachStore((s) => s.reducedMotion);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const page = pages.find((p) => location.pathname === `/${p.id}`) ?? pages[0];
   const [connectOpen, setConnectOpen] = useState(false);
   const root = useMotionScope(location.pathname);
-  return <div className="teach-shell">
+  return <div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
     <header className="teach-topbar">
-      <NavLink to="/dashboard" className="teach-brand"><span className="teach-brand-mark">R</span><strong>ROCOS <b>Teach</b></strong></NavLink>
       <StatusStrip />
       <div className="teach-header-actions">
         {connected ? <Popconfirm title={t('conn.disconnectTitle')} onConfirm={session.handleDisconnect}><Button aria-label={t('conn.disconnect')} icon={<DisconnectOutlined />} /></Popconfirm>
@@ -116,14 +123,19 @@ export function TeachShell() {
         <Button aria-label={t('teach.language')} icon={<TranslationOutlined />} onClick={() => useUIStore.getState().toggleLanguage()}>{language === 'zh' ? 'EN' : '中'}</Button>
       </div>
     </header>
-    <aside className="teach-sidebar"><div className="teach-nav-caption">{t('teach.workspace')}</div>
-      <nav aria-label={t('teach.workspace')}>{pages.map((item) => <NavLink key={item.id} to={`/${item.id}`} title={t(`teach.${item.id}`)}>{item.icon}<span>{t(`teach.${item.id}`)}</span></NavLink>)}</nav>
+    <aside className="teach-sidebar">
+      <Tooltip title={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} placement="right">
+        <button className="teach-brand" aria-label={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} aria-expanded={!sidebarCollapsed} aria-controls="teach-navigation" onClick={() => useUIStore.getState().toggleSidebar()}>
+          <span className="teach-brand-mark" aria-hidden="true">R</span><strong>ROCOS <b>Teach</b></strong>
+        </button>
+      </Tooltip>
+      <div className="teach-nav-caption">{t('teach.workspace')}</div>
+      <nav id="teach-navigation" aria-label={t('teach.workspace')}>{pages.map((item) => <Tooltip key={item.id} title={sidebarCollapsed ? t(`teach.${item.id}`) : undefined} placement="right">
+        <NavLink to={`/${item.id}`} aria-label={t(`teach.${item.id}`)}>{item.icon}<span>{t(`teach.${item.id}`)}</span></NavLink>
+      </Tooltip>)}</nav>
       <div className="teach-sidebar-bottom"><span className="teach-sidebar-symbol"><RobotOutlined /></span><strong>ROCOS Teach</strong><small>{t('teach.station')}</small><span className="teach-sidebar-version">v3.0</span></div>
     </aside>
-    <main className="teach-content" ref={root}>
-      <div className="teach-page-heading"><div><span className="teach-eyebrow">ROCOS / {page.id.toUpperCase()}</span><h1>{t(`teach.${page.id}`)}</h1><p>{t(`teach.${page.id}.desc`)}</p></div>
-        <div className={`teach-mode-badge ${connected ? 'live' : ''}`}><i />{t(connected ? 'teach.live' : 'teach.previewOnly')}</div>
-      </div>
+    <main className="teach-content" aria-label={t(`teach.${page.id}`)} ref={root}>
       <Suspense fallback={<div className="teach-loading"><Spin /></div>}>
         <Routes>
           <Route path="/dashboard" element={<Overview />} />
@@ -138,10 +150,6 @@ export function TeachShell() {
       </Suspense>
     </main>
     <ControlBar />
-    <nav className="teach-mobile-nav" aria-label={t('teach.workspace')}>
-      {pages.slice(0, 4).map((item) => <NavLink key={item.id} to={`/${item.id}`}>{item.icon}<span>{t(`teach.${item.id}`)}</span></NavLink>)}
-      <Dropdown trigger={['click']} menu={{ items: pages.slice(4).map((p) => ({ key: p.id, icon: p.icon, label: t(`teach.${p.id}`) })), onClick: ({ key }) => navigate(`/${key}`) }}><Button icon={<MoreOutlined />}>{t('teach.more')}</Button></Dropdown>
-    </nav>
     <ConnectDialog open={connectOpen} onClose={() => setConnectOpen(false)} />
   </div>;
 }

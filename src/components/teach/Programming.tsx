@@ -109,7 +109,7 @@ export function Programming() {
       <p className="teach-muted">{t('teach.draft')}</p>
     </TeachCard>
     <TeachCard title={t('teach.programming')} extra={<span className="teach-muted">{t('teach.scriptState')}: {connected ? robotStatus ?? '—' : t('teach.offline')}</span>}>
-      <Tabs activeKey={active} onChange={setActive} destroyInactiveTabPane items={[
+      <Tabs className="teach-fill-tabs" activeKey={active} onChange={setActive} destroyInactiveTabPane items={[
         { key: 'lua', label: t('teach.luaEditor'), children: <>
           <div className="teach-editor-toolbar"><Input aria-label={t('teach.name')} value={filename} onChange={(e) => setFilename(e.target.value)} />
             <Button icon={<DownloadOutlined />} onClick={() => downloadText(filename || 'program.lua', source)}>{t('teach.download')}</Button>

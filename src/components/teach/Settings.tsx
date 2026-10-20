@@ -16,7 +16,7 @@ export function Settings({ onConnect }: { onConnect: () => void }) {
   const reducedMotion = useTeachStore((s) => s.reducedMotion);
   const connected = useConnectionStore((s) => s.isConnected);
   const token = useConnectionStore((s) => s.controlToken);
-  return <div data-motion><Tabs items={[
+  return <div className="teach-page teach-settings" data-motion><Tabs className="teach-fill-tabs" items={[
     { key: 'appearance', label: t('teach.appearance'), children: <div className="teach-two-col">
       <TeachCard title={t('teach.workspace')}>
         <div className="teach-setting-row"><span>{t('teach.appearance')}</span><Segmented value={theme} options={[{ label: t('teach.light'), value: 'light' }, { label: t('teach.dark'), value: 'dark' }]} onChange={(value) => useUIStore.setState({ themeMode: value as 'light' | 'dark' })} /></div>

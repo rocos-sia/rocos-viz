@@ -9,6 +9,7 @@ import {
 } from '@/core/constants';
 
 interface CartesianJogItemProps {
+  showValue?: boolean;
   label: string;
   value: number;
   /** 参考坐标系名称: BASE / FLANGE / TOOL / OBJECT */
@@ -27,7 +28,7 @@ function frameToJogFrame(frameName: string): 'BASE' | 'FLANGE' | 'TOOL' | 'OBJEC
   return map[frameName] ?? 'BASE';
 }
 
-export function CartesianJogItem({ label, value, frameName, freedom, isPosition }: CartesianJogItemProps) {
+export function CartesianJogItem({ label, value, frameName, freedom, isPosition, showValue = true }: CartesianJogItemProps) {
   const isMM = useControlStore((s) => s.isMM);
   const isDegree = useControlStore((s) => s.isDegree);
   const speedFactor = useControlStore((s) => s.speedFactor);
@@ -57,17 +58,19 @@ export function CartesianJogItem({ label, value, frameName, freedom, isPosition 
 
       <Button
         className="jog-btn"
+        aria-label={`${label} −`}
           {...bind(-1)}
       >
         −
       </Button>
 
-      <span className="jog-value" style={{ flex: 1, textAlign: 'right' }}>
+      {showValue && <span className="jog-value" style={{ flex: 1, textAlign: 'right' }}>
         {displayValue} {displayUnit}
-      </span>
+      </span>}
 
       <Button
         className="jog-btn"
+        aria-label={`${label} +`}
           {...bind(1)}
       >
         +

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button, Input, Modal, Popconfirm, Tabs, message } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Input, Modal, Popconfirm, Tabs, Tooltip, message } from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import { useTeachStore, demoJoints, demoPosition, type TeachPoint } from '@/stores/teachStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
@@ -16,7 +16,7 @@ export function ContextPanel() {
   const deletePoint = useTeachStore((s) => s.deletePoint);
   const [edit, setEdit] = useState<TeachPoint | null>(null);
   const [name, setName] = useState('');
-  const [collapsed, setCollapsed] = useState(() => matchMedia('(max-width: 1199px)').matches);
+  const [collapsed, setCollapsed] = useState(() => matchMedia('(max-width: 1199px), (max-height: 850px)').matches);
   const connected = useConnectionStore((s) => s.isConnected);
   const record = () => {
     const state = useRobotStateStore.getState().robotState;
@@ -31,8 +31,8 @@ export function ContextPanel() {
   };
   return <section className={`teach-card teach-context ${collapsed ? 'collapsed' : ''}`}>
     <Tabs defaultActiveKey="points" tabBarExtraContent={<div className="teach-context-actions">
-      <Button type="primary" icon={<PlusOutlined />} onClick={record}>{t('teach.recordPoint')}</Button>
-      <Button aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{t(collapsed ? 'teach.expand' : 'teach.collapse')}</Button>
+      <Tooltip title={t('teach.recordPoint')}><Button type="primary" aria-label={t('teach.recordPoint')} icon={<PlusOutlined />} onClick={record}><span className="teach-context-button-label">{t('teach.recordPoint')}</span></Button></Tooltip>
+      <Tooltip title={t(collapsed ? 'teach.expand' : 'teach.collapse')}><Button aria-label={t(collapsed ? 'teach.expand' : 'teach.collapse')} icon={collapsed ? <UpOutlined /> : <DownOutlined />} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="teach-context-button-label">{t(collapsed ? 'teach.expand' : 'teach.collapse')}</span></Button></Tooltip>
     </div>} items={[
       { key: 'points', label: `${t('teach.points')} (${points.length})`, children: <div className="teach-table-scroll">
         <div className="teach-context-caption">{t('teach.localPoints')}</div>

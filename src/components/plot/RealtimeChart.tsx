@@ -41,13 +41,13 @@ export function RealtimeChart({ config, data, onClick }: RealtimeChartProps) {
     },
     xAxis: {
       type: 'time' as const,
-      axisLabel: { fontSize: 13, color: subTextColor },
+      axisLabel: { fontSize: 13, color: subTextColor, hideOverlap: true },
       axisLine: { lineStyle: { color: axisLineColor } },
     },
     yAxis: {
       type: 'value' as const,
       scale: true,
-      axisLabel: { fontSize: 13, color: subTextColor },
+      axisLabel: { fontSize: 13, color: subTextColor, hideOverlap: true },
       axisLine: { lineStyle: { color: axisLineColor } },
       splitLine: { lineStyle: { color: axisLineColor, opacity: 0.4 } },
     },

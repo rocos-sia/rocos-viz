@@ -19,7 +19,7 @@ export function Execution({ urdfContent }: { urdfContent: string | null }) {
     return () => window.clearInterval(timer);
   }, [running, advance]);
   useEffect(() => () => setRunning(false), [setRunning]);
-  return <div data-motion>
+  return <div className="teach-page teach-execution" data-motion>
     <Alert className="teach-feature-notice" type="info" showIcon message={t('teach.previewOnly')} description={t('teach.previewUnavailable')} />
     <div className="teach-execution-grid">
       <TeachCard title={t('teach.sequence')} extra={<DemoBadge />}>

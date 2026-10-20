@@ -13,6 +13,8 @@ interface UIState {
   currentView: 'scene' | 'plot';
   themeMode: ThemeMode;
   language: Language;
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
   rightPanelCollapsed: boolean;
   rightPanelWidth: number;
   plotFloatPos: { x: number; y: number } | null;
@@ -44,6 +46,8 @@ export const useUIStore = create<UIState>()(
       currentView: 'scene',
       themeMode: 'light',
       language: 'zh',
+      sidebarCollapsed: typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       rightPanelCollapsed: false,
       rightPanelWidth: 400,
       plotFloatPos: null,
