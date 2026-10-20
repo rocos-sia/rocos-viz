@@ -6,7 +6,8 @@ export type ThemeMode = 'dark' | 'light';
 
 interface UIState {
   showJointFrames: boolean;
-  showWireframe: boolean;
+  showTransparent: boolean;
+  showJointAxes: boolean;
   showGround: boolean;
   showTrajectory: boolean;
   currentView: 'scene' | 'plot';
@@ -17,7 +18,8 @@ interface UIState {
   plotFloatPos: { x: number; y: number } | null;
 
   toggleJointFrames: () => void;
-  toggleWireframe: () => void;
+  toggleTransparent: () => void;
+  toggleJointAxes: () => void;
   toggleGround: () => void;
   toggleTrajectory: () => void;
   setView: (view: 'scene' | 'plot') => void;
@@ -35,7 +37,8 @@ export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       showJointFrames: false,
-      showWireframe: false,
+      showTransparent: false,
+      showJointAxes: false,
       showGround: true,
       showTrajectory: false,
       currentView: 'scene',
@@ -46,7 +49,8 @@ export const useUIStore = create<UIState>()(
       plotFloatPos: null,
 
       toggleJointFrames: () => set((state) => ({ showJointFrames: !state.showJointFrames })),
-      toggleWireframe: () => set((state) => ({ showWireframe: !state.showWireframe })),
+      toggleTransparent: () => set((state) => ({ showTransparent: !state.showTransparent })),
+      toggleJointAxes: () => set((state) => ({ showJointAxes: !state.showJointAxes })),
       toggleGround: () => set((state) => ({ showGround: !state.showGround })),
       toggleTrajectory: () => set((state) => ({ showTrajectory: !state.showTrajectory })),
       setView: (view) => set({ currentView: view }),

@@ -19,12 +19,19 @@
 - `src/core/TelemetryBuffer.ts` / `src/hooks/useTelemetryCollector.ts`：独立采集环形缓存。
 - `public/demo/talon/`：复用仓库已有 Talon URDF/STL 的离线示例，不需要请求控制器模型接口。
 
+## 3D 显示控件
+
+场景上方居中显示轴测、俯视、前视、右视四个图标；下方居中显示半透明、坐标轴、关节轴、地面、轨迹五个开关。两组按钮均为 32×32 CSS px，浮动栏高度为 42px，支持中英文悬停提示与键盘聚焦提示。模型坐标轴使用加粗的实体箭杆与末端箭头，红、绿、蓝分别表示局部 X、Y、Z 正方向。
+
+半透明开关将模型材质的不透明度设为原值的 30%，关闭后恢复原始材质设置。坐标轴与关节轴独立控制，不隐式改变透明度。关节轴使用 URDF 的关节局部 `axis`，直箭头表示轴正方向；旋转关节（revolute / continuous）另绘制按右手规则的正向旋转弧箭头，移动关节（prismatic）仅显示直箭头。固定及无单一运动轴的关节不绘制此标记。演示和在线模型共用 `RobotVisuals.ts`，加载完成后读取最新开关状态，卸载时清理订阅和辅助图形。
+
 ## 验证
 
 ```sh
 npm run test:control
 npm run test:script
 npm run test:teach
+npm run test:scene
 npm run test:ui
 npm run build
 ```

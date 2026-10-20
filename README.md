@@ -99,6 +99,7 @@ python3 server/urdf_server.py --port 8080 --urdf server/models/talon/robot.urdf
 | `npm run preview` | 本地预览生产构建 |
 | `npm run test:control` | 验证控制权凭据、心跳、重试与清理行为 |
 | `npm run test:script` | 验证脚本列表、源码下载、文件名编码及错误处理 |
+| `npm run test:scene` | 验证模型透明度恢复、关节轴正方向与辅助图形清理 |
 | `npx eslint src` | 手动执行 ESLint，仓库未配置 `lint` 脚本 |
 
 自动化测试使用 Node.js 内置测试框架及模拟网络响应，不能替代真实控制器联调。

@@ -215,6 +215,8 @@ const DICT = {
   'view.top': { en: 'Top', zh: '俯视图' },
   'view.front': { en: 'Front', zh: '前视图' },
   'view.right': { en: 'Right', zh: '右视图' },
+  'scene.views': { en: 'Camera views', zh: '相机视图' },
+  'scene.options': { en: 'Scene display options', zh: '场景显示选项' },
 
   // ---- Connection ----
   'conn.connected': { en: 'Connected', zh: '已连接' },
@@ -243,7 +245,8 @@ const DICT = {
 
   // ---- Scene toggles ----
   'scene.axes': { en: 'Axes', zh: '坐标轴' },
-  'scene.mesh': { en: 'Mesh', zh: '网格' },
+  'scene.transparent': { en: 'Transparent model', zh: '半透明' },
+  'scene.jointAxes': { en: 'Joint axes (positive direction)', zh: '关节轴（正方向）' },
   'scene.ground': { en: 'Ground', zh: '地面' },
   'scene.trajectory': { en: 'Trajectory', zh: '轨迹' },
 

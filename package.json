@@ -1,7 +1,7 @@
 {
   "name": "rocos-web",
   "private": true,
-  "version": "3.0.0-rc.4",
+  "version": "3.0.0-rc.5",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -13,6 +13,7 @@
     "test:control": "node --test test/control-heartbeat.test.mjs",
     "test:script": "node --test test/script-api.test.mjs",
     "test:teach": "node --test test/teach-core.test.mjs",
+    "test:scene": "node --test test/robot-visuals.test.mjs",
     "test:ui": "playwright test"
   },
   "dependencies": {

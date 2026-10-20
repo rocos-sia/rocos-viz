@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tooltip, message } from 'antd';
-import { DeploymentUnitOutlined, BlockOutlined, BorderBottomOutlined, NodeIndexOutlined, WarningOutlined } from '@ant-design/icons';
+import { DeploymentUnitOutlined, AimOutlined, BorderBottomOutlined, NodeIndexOutlined, WarningOutlined } from '@ant-design/icons';
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { useUIStore } from '@/stores/uiStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -11,35 +11,49 @@ import { MAX_TRAJECTORY_POINTS } from '@/core/constants';
 import { useT } from '@/i18n/useT';
 import * as THREE from 'three';
 
+function TransparencyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" fillOpacity="0.4" />
+    </svg>
+  );
+}
+
 /** Reactive scene-toggle buttons – uses hooks so state changes are reflected immediately */
 export function SceneToggles({ style }: { style?: React.CSSProperties }) {
   const t = useT();
   const showJointFrames = useUIStore((s) => s.showJointFrames);
-  const showWireframe = useUIStore((s) => s.showWireframe);
+  const showTransparent = useUIStore((s) => s.showTransparent);
+  const showJointAxes = useUIStore((s) => s.showJointAxes);
   const showGround = useUIStore((s) => s.showGround);
   const showTrajectory = useUIStore((s) => s.showTrajectory);
   const toggleJointFrames = useUIStore((s) => s.toggleJointFrames);
-  const toggleWireframe = useUIStore((s) => s.toggleWireframe);
+  const toggleTransparent = useUIStore((s) => s.toggleTransparent);
+  const toggleJointAxes = useUIStore((s) => s.toggleJointAxes);
   const toggleGround = useUIStore((s) => s.toggleGround);
   const toggleTrajectory = useUIStore((s) => s.toggleTrajectory);
 
   const toggles = [
+    { key: 'transparent', label: t('scene.transparent'), icon: <TransparencyIcon />, active: showTransparent, onClick: toggleTransparent },
     { key: 'axes', label: t('scene.axes'), icon: <DeploymentUnitOutlined />, active: showJointFrames, onClick: toggleJointFrames },
-    { key: 'mesh', label: t('scene.mesh'), icon: <BlockOutlined />, active: showWireframe, onClick: toggleWireframe },
+    { key: 'jointAxes', label: t('scene.jointAxes'), icon: <AimOutlined />, active: showJointAxes, onClick: toggleJointAxes },
     { key: 'ground', label: t('scene.ground'), icon: <BorderBottomOutlined />, active: showGround, onClick: toggleGround },
     { key: 'traj', label: t('scene.trajectory'), icon: <NodeIndexOutlined />, active: showTrajectory, onClick: toggleTrajectory },
   ];
 
   return (
-    <div className="scene-toggles" style={style}>
+    <div className="scene-toggles" style={style} role="group" aria-label={t('scene.options')}>
       {toggles.map((t) => (
-        <Tooltip key={t.key} title={t.label}>
+        <Tooltip key={t.key} title={t.label} trigger={['hover', 'focus']}>
           <button
+            type="button"
             className={`scene-toggle-pill${t.active ? ' active' : ''}`}
+            aria-label={t.label}
+            aria-pressed={t.active}
             onClick={t.onClick}
           >
-            <span className="pill-icon">{t.icon}</span>
-            <span className="pill-label">{t.label}</span>
+            <span className="pill-icon" aria-hidden="true">{t.icon}</span>
           </button>
         </Tooltip>
       ))}
