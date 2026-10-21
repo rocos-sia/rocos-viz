@@ -26,7 +26,7 @@ test('offline routes and preview actions never issue controller requests', async
   await page.getByRole('button', { name: '记录当前点' }).click();
   await expect(page.getByRole('tab', { name: '示教点 (4)' })).toBeVisible();
   await page.getByRole('tab', { name: '精确控制' }).click();
-  await expect(page.locator('.teach-control-fieldset button').first()).toBeDisabled();
+  await expect(page.locator('.precise-actions button').first()).toBeDisabled();
   await page.locator('.teach-sidebar').getByRole('link', { name: '程序编程' }).click();
   await page.getByRole('tab', { name: /图形化编辑/ }).click();
   await expect(page.locator('.teach-generated')).toContainText('PREVIEW ONLY');

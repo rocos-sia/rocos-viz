@@ -1,0 +1,105 @@
+import { expect, test } from '@playwright/test';
+
+for (const language of ['zh', 'en']) {
+  test(`precise target tabs fit and remain browsable offline (${language})`, async ({ page }) => {
+    await page.addInitScript(language => localStorage.setItem('rocos-ui', JSON.stringify({ state: { language, themeMode: language === 'en' ? 'dark' : 'light' }, version: 0 })), language);
+    for (const [width, height] of [[1920, 1080], [1366, 768], [1024, 768], [390, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.goto('/#/teaching');
+      if (width < 600) await page.getByRole('button', { name: language === 'zh' ? '收起侧边栏' : 'Collapse sidebar' }).click();
+      await page.getByRole('tab', { name: language === 'zh' ? '精确控制' : 'Precise control', exact: true }).click();
+      const panel = page.locator('.precise-panel');
+      const tabs = panel.getByRole('radiogroup');
+      await tabs.getByText(language === 'zh' ? '关节位置' : 'Joint position', { exact: true }).click();
+      await expect(panel.getByRole('spinbutton')).toHaveCount(7);
+      for (const target of language === 'zh' ? ['关节位置', '笛卡尔位姿'] : ['Joint position', 'Cartesian pose']) {
+        await tabs.getByText(target, { exact: true }).click();
+        await expect(panel.getByRole('spinbutton').first()).toBeDisabled();
+        for (const button of await panel.locator('.precise-actions button').all()) {
+          await button.scrollIntoViewIfNeeded();
+          await expect(button).toBeDisabled();
+          await expect(button).toBeInViewport();
+        }
+        expect(await panel.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+        if (width === 1920) await page.locator('.teach-jog-card').screenshot({ path: `test-results/precise-${language}-${target.includes('Joint') || target === '关节位置' ? 'joint' : 'cartesian'}.png` });
+      }
+      await expect(panel.getByRole('spinbutton')).toHaveCount(6);
+      await expect(page.locator('.teach-jog-hint')).toHaveCount(0);
+    }
+  });
+}
+
+test('precise commands preserve tab targets, convert frames and block invalid or unauthorized moves', async ({ page }) => {
+  const commands: { path: string; body: { joints: number[]; pose: { position: { x: number; y: number; z: number }; orientation: { x: number; y: number; z: number; w: number } } } }[] = [];
+  await page.addInitScript(() => {
+    sessionStorage.setItem('rocos_client_id', 'precise-client');
+    sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true, isRobotEnabled: true, controlToken: 'precise-token', autoLoadModel: false }, version: 0 }));
+  });
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (/\/move/.test(path)) commands.push({ path, body: route.request().postDataJSON() });
+    await route.fulfill({ json: { success: true, code: 0, data: { has_owner: true, owner_client_id: 'precise-client', heartbeat_interval_seconds: 1 } } });
+  });
+  await page.routeWebSocket('**/ws/robot_state', socket => socket.send(JSON.stringify({
+    is_enabled: true, joint_states: Array.from({ length: 7 }, (_, i) => ({ name: `joint_${i + 1}`, position: 0, velocity: 0, torque: 0 })),
+    flange: { position: { x: 1, y: 2, z: 3 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
+    active_tool_frame_name: 'tcp', active_tool_frame: { position: { x: 0.1, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } },
+    active_object_frame_name: 'fixture', active_object_frame: { position: { x: 4, y: 5, z: 6 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
+  })));
+  await page.goto('/#/teaching');
+  await page.getByRole('tab', { name: '精确控制', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'J1', exact: true }).fill('90');
+  await page.getByRole('spinbutton', { name: 'J7', exact: true }).fill('-45');
+  for (const command of ['MoveJ', 'MoveL_FK']) {
+    await page.getByRole('button', { name: new RegExp(`\\(${command}\\)$`) }).click();
+    await expect.poll(() => commands.length).toBe(command === 'MoveJ' ? 1 : 2);
+  }
+  expect(commands.map(c => c.path)).toEqual(['/api/robot/movej', '/api/robot/movel_fk']);
+  expect(commands[0].body.joints).toHaveLength(7);
+  expect(commands[0].body.joints[0]).toBeCloseTo(Math.PI / 2);
+  expect(commands[0].body.joints[6]).toBeCloseTo(-Math.PI / 4);
+  expect(commands[1].body.joints).toEqual(commands[0].body.joints);
+  const targets = page.getByRole('radiogroup', { name: '目标空间' });
+  await targets.getByText('笛卡尔位姿', { exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'X', exact: true }).fill('200');
+  await page.getByRole('spinbutton', { name: 'RX', exact: true }).fill('90');
+  await targets.getByText('关节位置', { exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'J1', exact: true })).toHaveValue('90');
+  await targets.getByText('笛卡尔位姿', { exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'X', exact: true })).toHaveValue('200');
+  await page.locator('.teach-jog-card').screenshot({ path: 'test-results/precise-connected-cartesian.png' });
+  for (const [frame, position] of [
+    [400, [0.2, 0, 0]], [200, [1, 2.2, 3]], [100, [1, 2.3, 3]], [300, [4, 5.2, 6]],
+  ] as const) {
+    await page.evaluate(async frame => { const path = '/src/stores/controlStore.ts'; const { useControlStore } = await import(path); useControlStore.getState().setFrame(frame); }, frame);
+    const before = commands.length;
+    for (const command of ['MoveJ_IK', 'MoveL']) {
+      await page.getByRole('button', { name: new RegExp(`\\(${command}\\)$`) }).click();
+      await expect.poll(() => commands.length).toBe(before + (command === 'MoveJ_IK' ? 1 : 2));
+    }
+    const [ik, linear] = commands.slice(-2);
+    expect(ik.path).toBe('/api/robot/movej_ik');
+    expect(linear.path).toBe('/api/robot/movel');
+    expect(ik.body.pose).toEqual(linear.body.pose);
+    expect(ik.body.pose.position.x).toBeCloseTo(position[0]);
+    expect(ik.body.pose.position.y).toBeCloseTo(position[1]);
+    expect(ik.body.pose.position.z).toBeCloseTo(position[2]);
+    expect(ik.body.pose.orientation.x).toBeCloseTo(frame === 400 ? Math.SQRT1_2 : 0.5);
+    expect(ik.body.pose.orientation.y).toBeCloseTo(frame === 400 ? 0 : 0.5);
+    expect(ik.body.pose.orientation.z).toBeCloseTo(frame === 400 ? 0 : 0.5);
+    expect(ik.body.pose.orientation.w).toBeCloseTo(frame === 400 ? Math.SQRT1_2 : 0.5);
+    expect(linear.body).not.toHaveProperty('tool_name');
+    expect(linear.body).not.toHaveProperty('frame');
+  }
+  await page.evaluate(async () => {
+    const path = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(path);
+    useRobotStateStore.getState().updateState({ ...useRobotStateStore.getState().robotState, active_object_frame: undefined });
+  });
+  await expect(page.getByRole('status')).toContainText('当前参考坐标系数据不可用');
+  await expect(page.locator('.precise-actions button').first()).toBeDisabled();
+  await targets.getByText('关节位置', { exact: true }).click();
+  await expect(page.locator('.precise-actions button').first()).toBeEnabled();
+  await page.evaluate(async () => { const path = '/src/stores/connectionStore.ts'; const { useConnectionStore } = await import(path); useConnectionStore.setState({ controlToken: null }); });
+  await expect(page.locator('.precise-actions button').first()).toBeDisabled();
+  await expect(page.getByRole('spinbutton', { name: 'J1', exact: true })).toBeDisabled();
+});

@@ -567,10 +567,10 @@ html, body, #root {
 
 /* Jog +/− buttons (touch-friendly square targets) */
 .jog-btn {
-  width: 40px !important;
-  height: 40px !important;
+  width: var(--jog-button-size, 40px) !important;
+  height: var(--jog-button-size, 40px) !important;
   padding: 0 !important;
-  font-size: 20px !important;
+  font-size: var(--jog-button-font-size, 20px) !important;
   font-weight: 700;
   line-height: 1 !important;
   display: flex !important;

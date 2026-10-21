@@ -49,6 +49,7 @@ test('precision inputs retain their physical target when display units change', 
   await page.routeWebSocket('**/ws/robot_state', socket => socket.send(JSON.stringify({ is_enabled: true, joint_states: [{ name: 'joint_1', position: 0, velocity: 0, torque: 0 }], flange: { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } })));
   await page.goto('/#/teaching');
   await page.getByRole('tab', { name: '精确控制', exact: true }).click();
+  await page.getByRole('radiogroup', { name: '目标空间' }).getByText('笛卡尔位姿', { exact: true }).click();
   const inputs = page.locator('.precise-input input');
   await inputs.first().fill('250');
   await inputs.nth(3).fill('90');
@@ -59,7 +60,7 @@ test('precision inputs retain their physical target when display units change', 
   });
   await expect(inputs.first()).toHaveValue('0.25');
   expect(Number(await inputs.nth(3).inputValue())).toBeCloseTo(Math.PI / 2);
-  await page.getByRole('button', { name: 'MoveL', exact: true }).click();
+  await page.getByRole('button', { name: '笛卡尔空间运动 (MoveL)', exact: true }).click();
   await expect.poll(() => commands.length).toBe(1);
   expect(commands[0].pose.position.x).toBe(0.25);
   expect(commands[0].pose.orientation.x).toBeCloseTo(Math.SQRT1_2);

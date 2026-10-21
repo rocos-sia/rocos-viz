@@ -364,6 +364,14 @@ const DICT = {
 
   // ---- Precise control ----
   'precise.title': { en: 'Precise Control', zh: '精确控制' },
+  'precise.targetSpace': { en: 'Target space', zh: '目标空间' },
+  'precise.jointPosition': { en: 'Joint position', zh: '关节位置' },
+  'precise.cartesianPose': { en: 'Cartesian pose', zh: '笛卡尔位姿' },
+  'precise.jointMotion': { en: 'Joint-space motion', zh: '关节空间运动' },
+  'precise.cartesianMotion': { en: 'Cartesian-space motion', zh: '笛卡尔空间运动' },
+  'precise.reference': { en: 'Flange target in {frame}', zh: '法兰目标位姿 · {frame}' },
+  'precise.referenceAtExecution': { en: 'Reference frame is sampled when the command is sent.', zh: '以发送指令时的坐标系位姿为参考。' },
+  'precise.frameUnavailable': { en: 'Reference frame data is unavailable.', zh: '当前参考坐标系数据不可用。' },
   'precise.cartesianSpace': { en: 'Cartesian Space', zh: '笛卡尔空间' },
   'precise.jointSpace': { en: 'Joint Space', zh: '关节空间' },
   'precise.position': { en: 'Position', zh: '位置' },

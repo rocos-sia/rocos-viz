@@ -1,4 +1,3 @@
-import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { useState } from 'react';
 import { Button, Drawer, Tabs, Alert, Segmented, Tooltip } from 'antd';
 import { MinusOutlined, PlusOutlined, UndoOutlined, RedoOutlined, InfoCircleOutlined } from '@ant-design/icons';
@@ -39,7 +38,6 @@ function PreviewJog({ kind, joints, onJointChange, onCartesianChange }: { kind: 
 
 export function Teaching({ urdfContent }: { urdfContent: string | null }) {
   const t = useT();
-  const compact = useCompactScreen();
   const currentFrame = useControlStore((s) => s.currentFrame);
   const connected = useConnectionStore((s) => s.isConnected);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
@@ -67,11 +65,11 @@ export function Teaching({ urdfContent }: { urdfContent: string | null }) {
       <TeachCard title={t('teach.motionControl')} extra={<>{connected ? <span className="teach-muted">{t('teach.continuous')}</span> : <DemoBadge />}<Button className="teach-pad-details" onClick={() => setDetails(true)}>{t('teach.details')}</Button></>} className="teach-jog-card">
         {connected && (!enabled || !token) && <Alert type="warning" showIcon message={t('teach.jogReason')} />}
         <div className="teach-control-mode"><WorkModeSelector /><div className="teach-jog-reference"><FrameSelector /></div></div>
-        <Tabs activeKey={active} onChange={setActive} tabBarExtraContent={<Tooltip title={t('teach.hold')}><span className="teach-jog-hint" tabIndex={0} aria-label={t('teach.hold')}><span className="teach-jog-hint-text">{t('teach.hold')}</span><InfoCircleOutlined className="teach-jog-hint-icon" /></span></Tooltip>} items={[
+        <Tabs activeKey={active} onChange={setActive} tabBarExtraContent={active === 'jog' ? <Tooltip title={t('teach.hold')}><span className="teach-jog-hint" tabIndex={0} aria-label={t('teach.hold')}><span className="teach-jog-hint-text">{t('teach.hold')}</span><InfoCircleOutlined className="teach-jog-hint-icon" /></span></Tooltip> : undefined} items={[
           { key: 'jog', label: t('teach.jog') },
           { key: 'precise', label: t('teach.precise') },
         ]} />
-        {active === 'precise' ? <fieldset className="teach-control-fieldset" disabled={compact || !connected || !token || !enabled}><MotionCommandPanel /></fieldset>
+        {active === 'precise' ? <MotionCommandPanel />
           : <>
             <Segmented className="teach-jog-space" aria-label={t('teach.jogSpace')} block value={jogSpace}
               onChange={(value) => setJogSpace(String(value))} options={[
