@@ -1,7 +1,7 @@
 # ROCOS API 接口定义说明文档
 
-> 本文档依据 [ROCOS API.openapi.yaml](ROCOS%20%20API.openapi.yaml)（OpenAPI 3.0.1，版本 2.0.0）生成，
-> 描述机器人控制器的 HTTP/JSON 接口。该接口替代了原 gRPC 方案，支持多语言、跨平台集成。
+> 本文保留为历史接口接入说明，不作为最新 API 定义。本地 OpenAPI 文件已移除，接口协议统一维护于 [Apifox 项目 8387612](https://app.apifox.com/project/8387612)（迁移版本 `3.0.0`）。
+> 阅读或更新接口前，必须通过 MCP 刷新并读取在线定义；更新后通过 MCP 回读核验。下文与在线定义不一致时，以 Apifox 为准。
 
 ## 目录
 

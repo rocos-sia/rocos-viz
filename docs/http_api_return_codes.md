@@ -1,5 +1,7 @@
 # HTTP API — 返回值（业务码）汇总
 
+> 本文为历史业务码整理。最新接口定义以 [Apifox 项目 8387612](https://app.apifox.com/project/8387612) 为准；读取或更新协议时通过 MCP 刷新、读取并回读核验。
+
 本文档结合 `docs/http_api_design.md`（设计规范）和目前实现文件 `src/robot_http_server.cc`，列出：
 - 设计规范中的业务错误码（权威参考）
 - 实现中当前使用的 `code` 值（来自 `sendJson` 调用）

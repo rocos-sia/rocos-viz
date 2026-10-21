@@ -135,7 +135,7 @@ docs/           API 协议和说明
 
 ## 协议与贡献
 
-- [OpenAPI 协议](<docs/ROCOS  API.openapi.yaml>)：对照前后端接口定义。
+- [Apifox API 协议](https://app.apifox.com/project/8387612)：前后端接口定义的唯一维护源，API 版本为 `3.0.0`；通过 MCP 刷新、读取并在更新后回读核验，不再维护本地 OpenAPI 副本。
 - [贡献指南](AGENTS.md)：目录约定、代码风格与验证要求。
 - [版本维护技能](.agents/skills/project-versioning/SKILL.md)：提交前确认更新类型；内部测试递增 `rc.N`，确认 patch 发布时递增补丁号并移除 rc 后缀。
 

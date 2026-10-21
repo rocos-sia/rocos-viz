@@ -1,5 +1,7 @@
 # HTTP API — 控制权（Control Rights）机制
 
+> 本文为控制权机制的实现说明。最新接口定义以 [Apifox 项目 8387612](https://app.apifox.com/project/8387612) 为准；读取或更新协议时通过 MCP 刷新、读取并回读核验。
+
 版本：2026-08-12  
 关联文件：[`src/robot_http_server.hpp`](../src/robot_http_server.hpp)、[`src/robot_http_server.cpp`](../src/robot_http_server.cpp)
 
