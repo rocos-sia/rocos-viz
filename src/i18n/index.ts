@@ -141,7 +141,8 @@ const DICT = {
   'teach.softwareStop': { en: 'Motion stop', zh: '运动停止' },
   'teach.notEstop': { en: 'Software stop ≠ safety E-stop', zh: '软件停止 ≠ 安全急停' },
   'teach.cartesianState': { en: 'Cartesian pose', zh: '笛卡尔位姿' },
-  'teach.frameReadout': { en: 'Frame readout: {frame}', zh: '坐标系读数：{frame}' },
+  'teach.frameReadout': { en: 'Flange pose · {frame}', zh: '法兰位姿 · {frame}' },
+  'teach.displayFrameUnavailable': { en: '{frame} · pose unavailable', zh: '{frame} · 位姿数据不可用' },
   'teach.run': { en: 'Run', zh: '运行' },
   'teach.stop': { en: 'Stop', zh: '停止' },
   'teach.expandSidebar': { en: 'Expand sidebar', zh: '展开侧边栏' },
@@ -325,6 +326,8 @@ const DICT = {
 
   // ---- Frame selector ----
   'frame.label': { en: 'Frame', zh: '坐标系' },
+  'frame.motionReference': { en: 'Motion reference frame', zh: '运动参考坐标系' },
+  'frame.displayReference': { en: 'Display reference frame', zh: '显示参考坐标系' },
   'frame.BASE': { en: 'BASE', zh: '基座坐标系' },
   'frame.FLANGE': { en: 'FLANGE', zh: '法兰坐标系' },
   'frame.TOOL': { en: 'TOOL', zh: '工具坐标系' },
@@ -367,6 +370,8 @@ const DICT = {
   'precise.targetSpace': { en: 'Target space', zh: '目标空间' },
   'precise.jointPosition': { en: 'Joint position', zh: '关节位置' },
   'precise.cartesianPose': { en: 'Cartesian pose', zh: '笛卡尔位姿' },
+  'precise.fillCurrentJoints': { en: 'Use current joint positions', zh: '一键填写当前关节位置' },
+  'precise.fillCurrentPose': { en: 'Use current pose', zh: '一键填写当前位姿' },
   'precise.jointMotion': { en: 'Joint-space motion', zh: '关节空间运动' },
   'precise.cartesianMotion': { en: 'Cartesian-space motion', zh: '笛卡尔空间运动' },
   'precise.reference': { en: 'Flange target in {frame}', zh: '法兰目标位姿 · {frame}' },

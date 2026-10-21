@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Language } from '@/i18n';
+import { FRAME } from '@/core/constants';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -13,6 +14,8 @@ interface UIState {
   currentView: 'scene' | 'plot';
   themeMode: ThemeMode;
   language: Language;
+  displayFrame: number;
+  setDisplayFrame: (frame: number) => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   rightPanelCollapsed: boolean;
@@ -46,6 +49,8 @@ export const useUIStore = create<UIState>()(
       currentView: 'scene',
       themeMode: 'light',
       language: 'zh',
+      displayFrame: FRAME.BASE,
+      setDisplayFrame: (frame) => set({ displayFrame: frame }),
       sidebarCollapsed: typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       rightPanelCollapsed: false,

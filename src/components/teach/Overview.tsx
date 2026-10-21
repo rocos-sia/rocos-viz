@@ -7,24 +7,18 @@ import { useRobotStateStore } from '@/stores/robotStateStore';
 import { demoJoints, demoPosition, demoPrograms, useTeachStore } from '@/stores/teachStore';
 import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
-import { Euler, Quaternion } from 'three';
 import { RobotOverview } from './RobotOverview';
 import { FRAME } from '@/core/constants';
 import { useJointRanges } from '@/hooks/useJointRanges';
 import { jointBarRange } from '@/core/JointRange';
+import { preciseCurrentPose, preciseReference, preciseTarget } from '@/core/PreciseMotion';
+import { useUIStore } from '@/stores/uiStore';
 
-export function useDisplayRobot(frame: number = FRAME.BASE) {
+export function useDisplayRobot() {
   const connected = useConnectionStore((s) => s.isConnected);
   const state = useRobotStateStore((s) => s.robotState);
   const joints = connected ? state?.joint_states.map((j) => j.position * 180 / Math.PI) ?? [] : demoJoints;
-  const pose = frame === FRAME.TOOL ? state?.active_tool_frame ?? state?.flange
-    : frame === FRAME.OBJECT ? state?.active_object_frame ?? state?.flange : state?.flange;
-  const rpy = pose ? new Euler().setFromQuaternion(new Quaternion(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w), 'ZYX') : null;
-  return {
-    connected, state, joints,
-    position: connected ? pose ? [pose.position.x, pose.position.y, pose.position.z].map((v) => v * 1000) : [] : demoPosition,
-    rotation: connected ? rpy ? [rpy.x, rpy.y, rpy.z].map((v) => v * 180 / Math.PI) : [] : [179.98, -0.215, 89.672],
-  };
+  return { connected, state, joints };
 }
 
 export function JointReadout({ values, urdfContent }: { values?: number[]; urdfContent?: string | null } = {}) {
@@ -60,18 +54,26 @@ export function JointReadout({ values, urdfContent }: { values?: number[]; urdfC
   </div>;
 }
 
-export function PoseReadout({ frame, values }: { frame?: number; values?: number[] } = {}) {
+export function PoseReadout({ values }: { values?: number[] } = {}) {
   const units = useUnits();
-  const { position, rotation } = useDisplayRobot(frame);
+  const { connected, state } = useDisplayRobot();
+  const frame = useUIStore((s) => s.displayFrame);
+  const demoValues = values ?? [...demoPosition, 179.98, -0.215, 89.672];
+  const previewState = { joint_states: [], flange: preciseTarget(
+    demoValues.map((value, i) => i < 3 ? value / 1000 : value * Math.PI / 180),
+    preciseReference(FRAME.BASE, null)!,
+  ) };
+  const pose = preciseCurrentPose(frame, connected ? state : previewState);
   const t = useT();
+  const frameName = t(frame === FRAME.TOOL ? 'frame.TOOL' : frame === FRAME.OBJECT ? 'frame.OBJECT' : frame === FRAME.FLANGE ? 'frame.FLANGE' : 'frame.BASE');
   return <>
     <div className="teach-pose-grid">{['X', 'Y', 'Z', 'RX', 'RY', 'RZ'].map((axis, i) => {
-      const value = values ? values[i] : i < 3 ? position[i] : rotation[i - 3];
+      const value = pose?.[i];
       const display = i < 3 ? units.length : units.angle;
-      const conversion = i < 3 ? display.factor / 1000 : display.factor * Math.PI / 180;
-      return <div key={axis}><span>{axis}</span><strong>{value !== undefined ? (value * conversion).toFixed(3) : '—'}</strong><small>{display.label}</small></div>;
+      const rounded = value === undefined ? undefined : Number((value * display.factor).toFixed(3));
+      return <div key={axis}><span>{axis}</span><strong>{rounded !== undefined ? rounded.toFixed(3) : '—'}</strong><small>{display.label}</small></div>;
     })}</div>
-    <div className="teach-card-footnote">{frame === undefined ? t('teach.flangeBase') : t('teach.frameReadout', { frame: t(frame === FRAME.TOOL ? 'frame.TOOL' : frame === FRAME.OBJECT ? 'frame.OBJECT' : frame === FRAME.FLANGE ? 'frame.FLANGE' : 'frame.BASE') })}</div>
+    <div className="teach-card-footnote">{t(pose ? 'teach.frameReadout' : 'teach.displayFrameUnavailable', { frame: frameName })}</div>
   </>;
 }
 

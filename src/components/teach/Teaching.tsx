@@ -8,7 +8,6 @@ import { MotionCommandPanel } from '@/components/control/MotionCommandPanel';
 import { WorkModeSelector } from '@/components/control/WorkModeSelector';
 import { FrameSelector } from '@/components/control/FrameSelector';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { useControlStore } from '@/stores/controlStore';
 import { demoJoints, demoPosition } from '@/stores/teachStore';
 import { useT } from '@/i18n/useT';
 import { Robot3DCard } from './Robot3DCard';
@@ -38,7 +37,6 @@ function PreviewJog({ kind, joints, onJointChange, onCartesianChange }: { kind: 
 
 export function Teaching({ urdfContent }: { urdfContent: string | null }) {
   const t = useT();
-  const currentFrame = useControlStore((s) => s.currentFrame);
   const connected = useConnectionStore((s) => s.isConnected);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const token = useConnectionStore((s) => s.controlToken);
@@ -51,7 +49,7 @@ export function Teaching({ urdfContent }: { urdfContent: string | null }) {
   const changeJoint = (index: number, delta: number) => setPreviewJoints((values) => values.map((v, i) => i === index ? v + delta : v));
   const stateReadout = <div className="teach-realtime-readout">
     <section className="teach-state-section"><h3 className="teach-state-heading">{t('teach.jointStatus')}</h3><JointReadout urdfContent={urdfContent} values={connected ? undefined : previewJoints} /></section>
-    <section className="teach-state-section"><h3 className="teach-state-heading">{t('teach.cartesianState')}</h3><PoseReadout frame={currentFrame} values={connected ? undefined : previewPose} /></section>
+    <section className="teach-state-section"><h3 className="teach-state-heading">{t('teach.cartesianState')}</h3><PoseReadout values={connected ? undefined : previewPose} /></section>
   </div>;
   return <div className="teach-teaching">
     <div className="teach-scene-column">

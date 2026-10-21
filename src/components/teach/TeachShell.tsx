@@ -13,6 +13,7 @@ import { useControlStore } from '@/stores/controlStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
 import { EnableButton } from '@/components/control/EnableButton';
+import { FrameSelector } from '@/components/control/FrameSelector';
 import { Overview } from './Overview';
 import { Teaching } from './Teaching';
 import { Devices } from './Devices';
@@ -53,9 +54,10 @@ function StatusStrip() {
     <div className="teach-status-cell"><small>{t('teach.speed')}</small><strong>{(speed * 100).toFixed(0)}%</strong></div>
     <div className="teach-status-cell"><small>{t('teach.alarms')}</small><strong>{t('teach.unknown')}</strong></div>
     <div className="teach-frame-status">
-      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.TOOL')}{!connected && <span className="teach-frame-demo">{t('teach.demo')}</span>}</small><strong title={connected ? toolFrame || '—' : 'TCP_01'}>{connected ? toolFrame || '—' : 'TCP_01'}</strong></div>
-      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.OBJECT')}{!connected && <span className="teach-frame-demo">{t('teach.demo')}</span>}</small><strong title={connected ? objectFrame || '—' : 'Workpiece_01'}>{connected ? objectFrame || '—' : 'Workpiece_01'}</strong></div>
+      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.TOOL')}</small><strong title={connected ? toolFrame || '—' : 'TCP_01'}>{connected ? toolFrame || '—' : 'TCP_01'}</strong></div>
+      <div className="teach-status-cell teach-frame-cell"><small>{t('frame.OBJECT')}</small><strong title={connected ? objectFrame || '—' : 'Workpiece_01'}>{connected ? objectFrame || '—' : 'Workpiece_01'}</strong></div>
     </div>
+    <div className="teach-status-cell teach-display-frame"><FrameSelector purpose="display" /></div>
   </div>;
 }
 

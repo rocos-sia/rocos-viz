@@ -44,3 +44,19 @@ export function preciseTarget(values: number[], reference: Pose): Pose {
   const q = new Quaternion().setFromEuler(new Euler(roll, pitch, yaw, 'ZYX'));
   return compose(reference, { position: { x, y, z }, orientation: { x: q.x, y: q.y, z: q.z, w: q.w } });
 }
+
+export function preciseCurrentJoints(state: RobotState | null): number[] | null {
+  const values = state?.joint_states.map((joint) => joint.position);
+  return values?.length && values.every(Number.isFinite) ? values : null;
+}
+
+/** Express the current flange in the selected reference; inverse of preciseTarget. */
+export function preciseCurrentPose(frame: number, state: RobotState | null): number[] | null {
+  const reference = preciseReference(frame, state);
+  if (!reference || !validPose(state?.flange)) return null;
+  const inverse = quaternion(reference).invert();
+  const position = new Vector3(state.flange.position.x, state.flange.position.y, state.flange.position.z)
+    .sub(new Vector3(reference.position.x, reference.position.y, reference.position.z)).applyQuaternion(inverse);
+  const rotation = new Euler().setFromQuaternion(inverse.multiply(quaternion(state.flange)), 'ZYX');
+  return [position.x, position.y, position.z, rotation.x, rotation.y, rotation.z];
+}

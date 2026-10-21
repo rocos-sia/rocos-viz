@@ -14,6 +14,7 @@ for (const language of ['zh', 'en']) {
       await expect(panel.getByRole('spinbutton')).toHaveCount(7);
       for (const target of language === 'zh' ? ['关节位置', '笛卡尔位姿'] : ['Joint position', 'Cartesian pose']) {
         await tabs.getByText(target, { exact: true }).click();
+        await expect(panel.locator('.precise-fill-current')).toBeDisabled();
         await expect(panel.getByRole('spinbutton').first()).toBeDisabled();
         for (const button of await panel.locator('.precise-actions button').all()) {
           await button.scrollIntoViewIfNeeded();
@@ -102,4 +103,80 @@ test('precise commands preserve tab targets, convert frames and block invalid or
   await page.evaluate(async () => { const path = '/src/stores/connectionStore.ts'; const { useConnectionStore } = await import(path); useConnectionStore.setState({ controlToken: null }); });
   await expect(page.locator('.precise-actions button').first()).toBeDisabled();
   await expect(page.getByRole('spinbutton', { name: 'J1', exact: true })).toBeDisabled();
+});
+
+test('fill-current buttons snapshot telemetry in the chosen units and frame without motion requests', async ({ page }) => {
+  const motions: string[] = [];
+  await page.addInitScript(() => {
+    sessionStorage.setItem('rocos_client_id', 'fill-client');
+    sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true, autoLoadModel: false }, version: 0 }));
+  });
+  await page.route('**/api/**', async route => {
+    if (/\/api\/robot\/(move|jog)/.test(route.request().url())) motions.push(route.request().url());
+    await route.fulfill({ json: { success: true, code: 0, data: { has_owner: true, owner_client_id: 'another-client', heartbeat_interval_seconds: 1 } } });
+  });
+  await page.routeWebSocket('**/ws/robot_state', socket => socket.send(JSON.stringify({
+    is_enabled: false, joint_states: Array.from({ length: 7 }, (_, i) => ({ name: `joint_${i + 1}`, position: (i + 1) * Math.PI / 18, velocity: 0, torque: 0 })),
+    flange: { position: { x: 1, y: 2, z: 3 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
+    active_tool_frame_name: 'tcp', active_tool_frame: { position: { x: 0.1, y: 0, z: 0 }, orientation: { x: Math.SQRT1_2, y: 0, z: 0, w: Math.SQRT1_2 } },
+    active_object_frame_name: 'fixture', active_object_frame: { position: { x: 4, y: 5, z: 6 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
+  })));
+  await page.goto('/#/teaching');
+  await page.getByRole('tab', { name: '精确控制', exact: true }).click();
+  const fillJoints = page.getByRole('button', { name: '一键填写当前关节位置', exact: true });
+  await fillJoints.click();
+  for (let i = 0; i < 7; i++) expect(Number(await page.getByRole('spinbutton', { name: `J${i + 1}`, exact: true }).inputValue())).toBeCloseTo((i + 1) * 10);
+  await page.locator('.teach-jog-card').screenshot({ path: 'test-results/precise-fill-joints.png' });
+  await expect(page.locator('.precise-actions button').first()).toBeDisabled();
+  await page.evaluate(async () => {
+    const unitsPath = '/src/stores/unitStore.ts'; const { useUnitStore } = await import(unitsPath);
+    useUnitStore.getState().setUnits({ isDegree: false, isMM: false });
+    const statePath = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(statePath);
+    const state = useRobotStateStore.getState().robotState;
+    useRobotStateStore.getState().updateState({ ...state, joint_states: state.joint_states.map((joint: object) => ({ ...joint, position: 0.25 })) });
+  });
+  // Telemetry updates do not overwrite a target until the button is pressed again.
+  expect(Number(await page.getByRole('spinbutton', { name: 'J1', exact: true }).inputValue())).toBeCloseTo(Math.PI / 18);
+  await fillJoints.click();
+  await expect(page.getByRole('spinbutton', { name: 'J1', exact: true })).toHaveValue('0.25');
+  await page.getByRole('radiogroup', { name: '目标空间' }).getByText('笛卡尔位姿', { exact: true }).click();
+  const fillPose = page.getByRole('button', { name: '一键填写当前位姿', exact: true });
+  for (const [frame, expected] of [
+    [400, [1, 2, 3, 0, 0, Math.PI / 2]],
+    [200, [0, 0, 0, 0, 0, 0]],
+    [100, [-0.1, 0, 0, -Math.PI / 2, 0, 0]],
+    [300, [-3, 3, -3, 0, 0, 0]],
+  ] as const) {
+    await page.evaluate(async frame => { const path = '/src/stores/controlStore.ts'; const { useControlStore } = await import(path); useControlStore.getState().setFrame(frame); }, frame);
+    await fillPose.click();
+    const values = await page.locator('.precise-input input').evaluateAll(inputs => inputs.map(input => Number((input as HTMLInputElement).value)));
+    values.forEach((value, i) => expect(value).toBeCloseTo(expected[i]));
+    // Round trip must reconstruct the original base-frame flange pose.
+    const target = await page.evaluate(async ({ values, frame }) => {
+      const path = '/src/core/PreciseMotion.ts'; const { preciseReference, preciseTarget } = await import(path);
+      const statePath = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(statePath);
+      return preciseTarget(values, preciseReference(frame, useRobotStateStore.getState().robotState));
+    }, { values, frame });
+    [target.position.x, target.position.y, target.position.z].forEach((value, i) => expect(value).toBeCloseTo(i + 1));
+    expect(Math.abs(target.orientation.z)).toBeCloseTo(Math.SQRT1_2);
+    expect(Math.abs(target.orientation.w)).toBeCloseTo(Math.SQRT1_2);
+  }
+  await page.evaluate(async () => {
+    const path = '/src/stores/unitStore.ts'; const { useUnitStore } = await import(path);
+    useUnitStore.getState().setUnits({ isDegree: true, isMM: true });
+    const controls = '/src/stores/controlStore.ts'; const { useControlStore } = await import(controls); useControlStore.getState().setFrame(400);
+  });
+  await fillPose.click();
+  await expect(page.getByRole('spinbutton', { name: 'X', exact: true })).toHaveValue('1000');
+  expect(Number(await page.getByRole('spinbutton', { name: 'RZ', exact: true }).inputValue())).toBeCloseTo(90);
+  await page.locator('.teach-jog-card').screenshot({ path: 'test-results/precise-fill-pose.png' });
+  await page.evaluate(async () => {
+    const path = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(path);
+    const state = useRobotStateStore.getState().robotState;
+    useRobotStateStore.getState().updateState({ ...state, flange: undefined, joint_states: [] });
+  });
+  await expect(fillPose).toBeDisabled();
+  await page.getByRole('radiogroup', { name: '目标空间' }).getByText('关节位置', { exact: true }).click();
+  await expect(fillJoints).toBeDisabled();
+  expect(motions).toEqual([]);
 });

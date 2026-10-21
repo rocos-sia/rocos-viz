@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { Button, InputNumber, Segmented, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import { useUnitStore } from '@/stores/unitStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useControlStore } from '@/stores/controlStore';
@@ -7,7 +8,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { FRAME, jointMotionParams, cartesianMotionParams } from '@/core/constants';
-import { preciseReference, preciseTarget } from '@/core/PreciseMotion';
+import { preciseCurrentJoints, preciseCurrentPose, preciseReference, preciseTarget } from '@/core/PreciseMotion';
 import { useT } from '@/i18n/useT';
 
 type Command = 'MoveJ' | 'MoveL_FK' | 'MoveJ_IK' | 'MoveL';
@@ -32,8 +33,17 @@ export function MotionCommandPanel() {
   const reference = preciseReference(currentFrame, state);
   const allowed = connected && enabled && !!token && !compact;
   const available = space === 'joint' ? !!state?.joint_states.length : !!reference;
+  const currentValues = space === 'joint' ? preciseCurrentJoints(state) : preciseCurrentPose(currentFrame, state);
 
   useEffect(() => { setJoints((values) => Array.from({ length: jointCount }, (_, i) => values[i] ?? 0)); }, [jointCount]);
+
+  const fillCurrent = () => {
+    if (!useConnectionStore.getState().isConnected || sending.current) return;
+    const robot = useRobotStateStore.getState().robotState;
+    const values = space === 'joint' ? preciseCurrentJoints(robot)
+      : preciseCurrentPose(useControlStore.getState().currentFrame, robot);
+    if (values) (space === 'joint' ? setJoints : setCartesian)(values);
+  };
 
   const send = async (command: Command) => {
     const connection = useConnectionStore.getState();
@@ -83,6 +93,10 @@ export function MotionCommandPanel() {
       {currentFrame !== FRAME.BASE && <span>{t('precise.referenceAtExecution')}</span>}
       {!reference && <span role="status">{t('precise.frameUnavailable')}</span>}
     </div>}
+    <Button className="precise-fill-current" block icon={<CopyOutlined aria-hidden="true" />}
+      disabled={!connected || !currentValues || !!pending} onClick={fillCurrent}>
+      {t(space === 'joint' ? 'precise.fillCurrentJoints' : 'precise.fillCurrentPose')}
+    </Button>
     <fieldset className="teach-control-fieldset precise-fields" disabled={!allowed || !!pending} aria-label={t(space === 'joint' ? 'precise.jointPosition' : 'precise.cartesianPose')}>
       <div className="precise-grid">
         {values.map((value, index) => {
