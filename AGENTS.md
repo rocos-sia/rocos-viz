@@ -36,6 +36,8 @@ History mixes short updates with descriptive `feat:`, `fix:`, `refactor:`, `perf
 
 ## API Contract Maintenance
 
+For API-contract retrieval, comparison, or updates, follow [rocos-api-maintenance](.agents/skills/rocos-api-maintenance/SKILL.md), which defines the MCP read, write-capability fallback, and readback verification workflow.
+
 The sole authoritative API contract is maintained in [Apifox project `8387612`](https://app.apifox.com/project/8387612), module `7912103` (`ROCOS API`). Use the project's MCP connection for every API-contract read and update. Refresh the remote definition before reading it, and resolve the referenced operation and schema resources instead of relying on the summary index or a stale local snapshot. After each update, refresh and read back the affected definitions through MCP to verify the saved result. Do not claim a successful sync based only on a local export or an import response.
 
 The migration to API `info.version: 3.0.0` was verified through MCP on 2026-10-21: 62 paths, 66 operations, and 48 protected operations requiring `ControlToken` AND `ClientId` in the same security requirement. The four retained online-only operations are `POST /api/robot/stiffness`, `/api/robot/damping`, `/api/robot/drag/start`, and `/api/robot/drag/stop`; the nine deprecated `/api/move/*` operations were removed. Existing deprecated calibration operations and seven extra online schemas were retained (28 schemas total). This API version is independent of the application's package version.
