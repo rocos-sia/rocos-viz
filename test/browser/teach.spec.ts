@@ -137,8 +137,8 @@ test('controller session survives navigation; releasing and leaving jog sends st
   await page.locator('.ant-select-dropdown').getByText('工具坐标系', { exact: true }).click();
   await expect(page.locator('.teach-state-column .teach-pose-grid > div').first()).toContainText('0.000');
   await page.locator('.teach-display-frame .ant-select').click();
-  await page.locator('.ant-select-dropdown:visible').getByText('工具坐标系', { exact: true }).click();
-  await expect(page.locator('.teach-state-column .teach-pose-grid > div').first()).toContainText('-125.000');
+  await page.locator('.ant-select-dropdown:visible').getByText('工具', { exact: true }).click();
+  await expect(page.locator('.teach-state-column .teach-pose-grid > div').first()).toContainText('125.000');
   const nullJog = page.getByRole('button', { name: 'N1 +', exact: true });
   await nullJog.scrollIntoViewIfNeeded();
   await nullJog.focus();

@@ -20,6 +20,7 @@ import { Devices } from './Devices';
 import { Execution } from './Execution';
 import { Settings } from './Settings';
 import { HeaderAccount } from './HeaderAccount';
+import { PersistentRobotScenes } from './PersistentRobotScenes';
 
 const Programming = lazy(() => import('./Programming').then((m) => ({ default: m.Programming })));
 const Diagnostics = lazy(() => import('./Diagnostics').then((m) => ({ default: m.Diagnostics })));
@@ -111,7 +112,7 @@ export function TeachShell() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const page = pages.find((p) => location.pathname === `/${p.id}`) ?? pages[0];
   const root = useMotionScope(location.pathname);
-  return <div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
+  return <PersistentRobotScenes urdfContent={session.urdfContent}><div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
     <header className="teach-topbar">
       <StatusStrip />
       <HeaderAccount />
@@ -134,7 +135,7 @@ export function TeachShell() {
           <Route path="/dashboard" element={<Overview urdfContent={session.urdfContent} />} />
           <Route path="/teaching" element={<Teaching urdfContent={session.urdfContent} />} />
           <Route path="/programming" element={<Programming />} />
-          <Route path="/execution" element={<Execution urdfContent={session.urdfContent} />} />
+          <Route path="/execution" element={<Execution />} />
           <Route path="/devices" element={<Devices />} />
           <Route path="/diagnostics" element={<Diagnostics />} />
           <Route path="/settings" element={<Settings onDisconnect={session.handleDisconnect} onTakeover={session.handleTakeover} />} />
@@ -143,5 +144,5 @@ export function TeachShell() {
       </Suspense>
     </main>
     <ControlBar />
-  </div>;
+  </div></PersistentRobotScenes>;
 }

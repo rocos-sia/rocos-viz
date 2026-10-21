@@ -166,7 +166,7 @@ body { font-size: var(--font-body); line-height: 1.5; color: var(--teach-text); 
 .teach-3d > .teach-card-header { grid-area: 1 / 1; align-self: start; position: relative; z-index: 3; border-bottom: 0; pointer-events: none; }
 .teach-3d > .teach-card-header::before { content: ''; position: absolute; inset: 0 0 -24px; z-index: -1; background: linear-gradient(to bottom, var(--teach-card), var(--teach-scene-header-tint) 60%, transparent); }
 .teach-3d > .teach-card-header .teach-card-extra { pointer-events: auto; }
-.teach-3d > .teach-card-body { grid-area: 1 / 1; position: relative; z-index: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.teach-3d > .teach-card-body { grid-area: 1 / 1; position: relative; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .teach-scene-toolbar, .teach-3d .scene-toggles {
   position: absolute;
   z-index: 2;
@@ -186,7 +186,11 @@ body { font-size: var(--font-body); line-height: 1.5; color: var(--teach-text); 
   box-shadow: 0 4px 16px rgb(15 23 42 / 14%);
   overflow: visible;
 }
-.teach-scene-toolbar { top: calc(var(--scene-header-height) + 8px); }
+.teach-scene-toolbar { top: calc(var(--scene-header-height) - var(--teach-card-header-padding-y)); z-index: 4; }
+@media (hover: hover) and (pointer: fine) {
+  .teach-scene-toolbar { opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+  .teach-scene-toolbar.is-near, .teach-scene-toolbar:has(:focus-visible) { opacity: 1; pointer-events: auto; }
+}
 .teach-3d .scene-toggles { bottom: 12px; }
 .teach-scene-canvas { position: relative; flex: 1; min-height: 0; background: #f5f7fb; }
 .teach-scene-note { position: absolute; top: calc(var(--scene-header-height) + 60px); left: 20px; color: var(--teach-muted); }

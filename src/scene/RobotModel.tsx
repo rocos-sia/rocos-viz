@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { parseUrdf } from '@/core/UrdfModelLoader';
+import { acquireControllerModel } from '@/core/ControllerModelCache';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { attachRobotVisuals } from './attachRobotVisuals';
 import type { URDFRobot } from 'urdf-loader';
@@ -19,32 +19,34 @@ export function RobotModel({
 }: RobotModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const robotRef = useRef<URDFRobot | null>(null);
-  const robotState = useRobotStateStore((s) => s.robotState);
 
   // ── Load / reload the URDF model ──────────────────────────────
   useEffect(() => {
     let cancelled = false;
     let loaded: URDFRobot | null = null;
+    let releaseModel: (() => void) | undefined;
     let cleanupVisuals: (() => void) | undefined;
 
     async function loadModel() {
       if (!urdfContent) return;
 
       try {
-        const { robot } = await parseUrdf(urdfContent, meshBasePath);
+        const resource = await acquireControllerModel(urdfContent, meshBasePath);
+        const { robot } = resource;
 
         if (cancelled) {
-          disposeRobot(robot);
+          resource.release();
           return;
         }
 
         if (groupRef.current) {
           loaded = robot;
+          releaseModel = resource.release;
           groupRef.current.add(robot);
           robotRef.current = robot;
           cleanupVisuals = attachRobotVisuals(robot);
         } else {
-          disposeRobot(robot);
+          resource.release();
         }
       } catch (error) {
         console.error('Failed to load URDF model:', error);
@@ -57,7 +59,7 @@ export function RobotModel({
       cancelled = true;
       cleanupVisuals?.();
       loaded?.removeFromParent();
-      disposeRobot(loaded);
+      releaseModel?.();
       if (robotRef.current === loaded) robotRef.current = null;
     };
   }, [urdfContent, meshBasePath]);
@@ -65,6 +67,7 @@ export function RobotModel({
   // ── Per-frame joint update ──────────────────────────────────
   useFrame(() => {
     const robot = robotRef.current;
+    const robotState = useRobotStateStore.getState().robotState;
     if (!robot || !robotState) return;
 
     if (robotState.joint_states?.length) {
@@ -76,20 +79,5 @@ export function RobotModel({
     }
   });
 
-  return <group ref={groupRef} />;
-}
-
-function disposeRobot(robot: URDFRobot | null): void {
-  if (!robot) return;
-  robot.traverse((child: THREE.Object3D) => {
-    if (child instanceof THREE.Mesh) {
-      child.geometry?.dispose();
-      const materials = Array.isArray(child.material)
-        ? child.material
-        : [child.material];
-      for (const m of materials) {
-        m.dispose();
-      }
-    }
-  });
+  return <group ref={groupRef} dispose={null} />;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Button, Tooltip } from 'antd';
 import { ExpandOutlined, ShrinkOutlined } from '@ant-design/icons';
 import URDFLoader, { type URDFRobot } from 'urdf-loader';
@@ -14,6 +14,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
 import { ResetButton, SceneToggles, TrajectoryLineWrapper } from '@/components/layout/SceneControls';
+import { SceneSlot } from './SceneSlot';
 
 type CameraPreset = Parameters<typeof setCameraPreset>[0];
 const VIEW_PRESETS: CameraPreset[] = ['axonometric', 'top', 'front', 'right'];
@@ -83,13 +84,28 @@ function DemoRobot() {
   return robot ? <primitive object={robot} /> : null;
 }
 
-export function Robot3DCard({ urdfContent }: { urdfContent: string | null }) {
+export function Robot3DCardScene({ urdfContent, active }: { urdfContent: string | null; active: boolean }) {
   const t = useT();
   const connected = useConnectionStore((s) => s.isConnected);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);
   const [expanded, setExpanded] = useState(false);
   const [viewPreset, setViewPreset] = useState<CameraPreset>('axonometric');
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [nearToolbar, setNearToolbar] = useState(false);
+  useEffect(() => {
+    if (!active) {
+      setExpanded(false);
+      setNearToolbar(false);
+    }
+  }, [active]);
+  const updateToolbarProximity = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || !toolbarRef.current) return;
+    const rect = toolbarRef.current.getBoundingClientRect();
+    const margin = 32;
+    setNearToolbar(event.clientX >= rect.left - margin && event.clientX <= rect.right + margin
+      && event.clientY >= rect.top - margin && event.clientY <= rect.bottom + margin);
+  };
   useEffect(() => {
     const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
     window.addEventListener('keydown', escape);
@@ -97,8 +113,9 @@ export function Robot3DCard({ urdfContent }: { urdfContent: string | null }) {
   }, []);
   return <TeachCard className={`teach-3d ${expanded ? 'teach-3d-expanded' : ''}`} title={t('teach.scene')}
     extra={<>{!connected && <DemoBadge />}<Button aria-label={t('teach.expand')} icon={expanded ? <ShrinkOutlined /> : <ExpandOutlined />} onClick={() => setExpanded(!expanded)} /></>}>
-    <div className="teach-scene-canvas">
-      <div className="teach-scene-toolbar" role="group" aria-label={t('scene.views')}>
+    <div className="teach-scene-canvas" onPointerMoveCapture={updateToolbarProximity}
+      onPointerLeave={() => setNearToolbar(false)}>
+      <div ref={toolbarRef} className={`teach-scene-toolbar${nearToolbar ? ' is-near' : ''}`} role="group" aria-label={t('scene.views')}>
         {VIEW_PRESETS.map((preset) => (
           <Tooltip key={preset} title={t(`view.${preset}`)} placement="bottom" trigger={['hover', 'focus']}>
             <button
@@ -114,15 +131,19 @@ export function Robot3DCard({ urdfContent }: { urdfContent: string | null }) {
         ))}
       </div>
       <SceneErrorBoundary>
-        <RobotViewer>
+        <RobotViewer active={active}>
           <AxesIndicator />
           {connected ? <RobotModel urdfContent={urdfContent} meshBasePath={new RobotApiClient(host, port).getMeshBaseUrl()} /> : <DemoRobot />}
-          {connected && <TrajectoryLineWrapper />}
+          {connected && active && <TrajectoryLineWrapper />}
         </RobotViewer>
       </SceneErrorBoundary>
       {connected && !urdfContent && <div className="teach-scene-note">{t('teach.loadingModel')}</div>}
-      <ResetButton />
+      {active && <ResetButton />}
       <SceneToggles />
     </div>
   </TeachCard>;
+}
+
+export function Robot3DCard() {
+  return <SceneSlot name="workspace" />;
 }

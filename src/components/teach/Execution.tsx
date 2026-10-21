@@ -6,7 +6,7 @@ import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
 import { Robot3DCard } from './Robot3DCard';
 
-export function Execution({ urdfContent }: { urdfContent: string | null }) {
+export function Execution() {
   const t = useT();
   const running = useTeachStore((s) => s.demoRunning);
   const step = useTeachStore((s) => s.demoStep);
@@ -35,7 +35,7 @@ export function Execution({ urdfContent }: { urdfContent: string | null }) {
           <Button icon={<ReloadOutlined />} onClick={reset}>{t('teach.reset')}</Button>
         </div>
       </TeachCard>
-      <Robot3DCard urdfContent={urdfContent} />
+      <Robot3DCard />
     </div>
   </div>;
 }

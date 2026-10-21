@@ -11,7 +11,8 @@ import { RobotOverview } from './RobotOverview';
 import { FRAME } from '@/core/constants';
 import { useJointRanges } from '@/hooks/useJointRanges';
 import { jointBarRange } from '@/core/JointRange';
-import { preciseCurrentPose, preciseReference, preciseTarget } from '@/core/PreciseMotion';
+import { preciseReference, preciseTarget } from '@/core/PreciseMotion';
+import { displayPose } from '@/core/DisplayPose';
 import { useUIStore } from '@/stores/uiStore';
 
 export function useDisplayRobot() {
@@ -63,9 +64,9 @@ export function PoseReadout({ values }: { values?: number[] } = {}) {
     demoValues.map((value, i) => i < 3 ? value / 1000 : value * Math.PI / 180),
     preciseReference(FRAME.BASE, null)!,
   ) };
-  const pose = preciseCurrentPose(frame, connected ? state : previewState);
+  const pose = displayPose(frame, connected ? state : previewState);
   const t = useT();
-  const frameName = t(frame === FRAME.TOOL ? 'frame.TOOL' : frame === FRAME.OBJECT ? 'frame.OBJECT' : frame === FRAME.FLANGE ? 'frame.FLANGE' : 'frame.BASE');
+  const frameName = t(frame === FRAME.TOOL ? 'frame.displayTool' : frame === FRAME.OBJECT ? 'frame.displayObject' : 'frame.displayFlange');
   return <>
     <div className="teach-pose-grid">{['X', 'Y', 'Z', 'RX', 'RY', 'RZ'].map((axis, i) => {
       const value = pose?.[i];
@@ -95,7 +96,7 @@ export function Overview({ urdfContent }: { urdfContent: string | null }) {
   const step = useTeachStore((s) => s.demoStep);
   return <div className="teach-dashboard" data-motion>
     <TeachCard title={t('teach.robotStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary">
-      <RobotOverview urdfContent={urdfContent} />
+      <RobotOverview />
       <Link className="teach-card-link" to="/teaching">{t('teach.openTeaching')} <ArrowRightOutlined /></Link>
     </TeachCard>
     <TeachCard title={t('teach.jointStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary"><JointReadout urdfContent={urdfContent} /></TeachCard>

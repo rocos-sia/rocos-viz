@@ -16,9 +16,10 @@ export function setCameraPreset(key: CameraPresetKey) {
   onPresetChange?.(key);
 }
 
-export function CameraPresets() {
+export function CameraPresets({ active = true }: { active?: boolean }) {
   const { camera } = useThree();
   useEffect(() => {
+    if (!active) return;
     onPresetChange = (key) => {
       const preset = CAMERA_PRESETS[key];
       camera.position.set(...preset.position);
@@ -26,6 +27,6 @@ export function CameraPresets() {
       camera.updateProjectionMatrix();
     };
     return () => { onPresetChange = null; };
-  }, [camera]);
+  }, [camera, active]);
   return null;
 }

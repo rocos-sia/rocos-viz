@@ -14,7 +14,11 @@ export function FrameSelector({ purpose = 'motion' }: { purpose?: 'motion' | 'di
   const setDisplayFrame = useUIStore((s) => s.setDisplayFrame);
   const label = t(purpose === 'motion' ? 'frame.motionReference' : 'frame.displayReference');
 
-  const frameOptions = [
+  const frameOptions = purpose === 'display' ? [
+    { value: FRAME.FLANGE, label: t('frame.displayFlange') },
+    { value: FRAME.TOOL, label: t('frame.displayTool') },
+    { value: FRAME.OBJECT, label: t('frame.displayObject') },
+  ] : [
     { value: FRAME.BASE, label: t('frame.BASE') },
     { value: FRAME.FLANGE, label: t('frame.FLANGE') },
     { value: FRAME.TOOL, label: t('frame.TOOL') },

@@ -53,7 +53,7 @@ export function Teaching({ urdfContent }: { urdfContent: string | null }) {
   </div>;
   return <div className="teach-teaching">
     <div className="teach-scene-column">
-      <div className="teach-teaching-grid"><Robot3DCard urdfContent={urdfContent} /></div>
+      <div className="teach-teaching-grid"><Robot3DCard /></div>
       <ContextPanel />
     </div>
     <aside className="teach-state-column">

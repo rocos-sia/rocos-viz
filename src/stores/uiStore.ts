@@ -49,7 +49,7 @@ export const useUIStore = create<UIState>()(
       currentView: 'scene',
       themeMode: 'light',
       language: 'zh',
-      displayFrame: FRAME.BASE,
+      displayFrame: FRAME.FLANGE,
       setDisplayFrame: (frame) => set({ displayFrame: frame }),
       sidebarCollapsed: typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -78,6 +78,18 @@ export const useUIStore = create<UIState>()(
         }),
       setPlotFloatPos: (pos) => set({ plotFloatPos: pos }),
     }),
-    { name: 'rocos-ui' },
+    {
+      name: 'rocos-ui',
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<UIState> | undefined;
+        return {
+          ...current,
+          ...saved,
+          // The former BASE readout is now the flange pose in the base frame.
+          displayFrame: saved?.displayFrame === FRAME.TOOL || saved?.displayFrame === FRAME.OBJECT
+            ? saved.displayFrame : FRAME.FLANGE,
+        };
+      },
+    },
   ),
 );

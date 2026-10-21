@@ -14,7 +14,9 @@ export default function App() {
 
   return (
     <ConfigProvider locale={language === 'zh' ? zhCN : enUS} theme={currentTheme}>
-      <AntApp><HashRouter><AppLayout /></HashRouter></AntApp>
+      {/* Commit navigation immediately: live external-store updates can repeatedly
+          interrupt a concurrent route transition while the robot is connected. */}
+      <AntApp><HashRouter useTransitions={false}><AppLayout /></HashRouter></AntApp>
     </ConfigProvider>
   );
 }

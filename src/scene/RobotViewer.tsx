@@ -7,34 +7,18 @@ import * as THREE from 'three';
 
 interface RobotViewerProps {
   children?: React.ReactNode;
+  active?: boolean;
 }
 
-/** Probe whether the browser can actually create a WebGL context. */
-function isWebGLAvailable(): boolean {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function RobotViewer({ children }: RobotViewerProps) {
+export function RobotViewer({ children, active = true }: RobotViewerProps) {
   const showGround = useUIStore((s) => s.showGround);
   const isLight = useUIStore((s) => s.themeMode === 'light');
 
-  // Throw a clear, actionable error (caught by SceneErrorBoundary) instead of
-  // letting @react-three/fiber crash with an opaque internal failure when the
-  // client machine has no working WebGL (no GPU acceleration, VM, old driver…).
-  if (!isWebGLAvailable()) {
-    throw new Error('WebGL is not available in this browser/device.');
-  }
-
+  // Let the actual renderer initialize WebGL; SceneErrorBoundary handles failure.
+  // Probing with throwaway canvases stalls rendering and exhausts GPU contexts.
   return (
     <Canvas
+      frameloop={active ? 'always' : 'never'}
       camera={{
         position: [1.6, -1.6, 1.5],
         fov: 50,
@@ -62,6 +46,7 @@ export function RobotViewer({ children }: RobotViewerProps) {
       <color attach="background" args={[isLight ? '#f8f9fa' : '#111318']} />
       <SceneHelpers showGround={showGround} />
       <OrbitControls
+        enabled={active}
         makeDefault
         target={[0, 0, 0.5]}
         enableDamping
@@ -69,7 +54,7 @@ export function RobotViewer({ children }: RobotViewerProps) {
         minDistance={0.5}
         maxDistance={50}
       />
-      <CameraPresets />
+      <CameraPresets active={active} />
       {children}
     </Canvas>
   );

@@ -735,8 +735,12 @@ html, body, #root {
   opacity: 1;
 }
 
-.robot-reset-btn {
+.robot-reset-overlay.visible .robot-reset-btn {
   pointer-events: auto;
+}
+
+.robot-reset-btn {
+  pointer-events: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;

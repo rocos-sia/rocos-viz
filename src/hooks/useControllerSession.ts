@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
+import { getControllerUrdf, preloadControllerModel } from '@/core/ControllerModelCache';
 import { startControlHeartbeat } from '@/core/ControlHeartbeat';
 import { useRobotConnection } from './useRobotConnection';
 import { useT } from '@/i18n/useT';
@@ -179,13 +180,15 @@ export function useControllerSession() {
     async function fetchModel() {
       try {
         const client = new RobotApiClient(host, port);
-        const urdfXml = await client.getUrdf();
+        const urdfXml = await getControllerUrdf(client);
 
         if (cancelled) return;
 
         if (urdfXml && urdfXml.trim().startsWith('<')) {
           console.log('[AppLayout] Loaded URDF from controller, length:', urdfXml.length);
           setUrdfContent(urdfXml);
+          void preloadControllerModel(urdfXml, client.getMeshBaseUrl())
+            .catch((error: unknown) => console.warn('Model preload failed; the view can retry', error));
         }
       } catch (error) {
         console.error('Failed to fetch robot model:', error);

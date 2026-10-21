@@ -46,7 +46,7 @@ test('URDF metadata, zero pose, mimic offset and camera fitting use model data',
   expect(result.invalidXml).toBe(true);
 });
 
-test('overview renders controller metadata and isolates preview from live joints', async ({ page }) => {
+test('overview follows live joints even when rotation is paused or reduced', async ({ page }) => {
   const robotWrites: string[] = [];
   await page.addInitScript(() => sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true }, version: 0 })));
   await page.route('**/api/**', async (route) => {
@@ -62,11 +62,32 @@ test('overview renders controller metadata and isolates preview from live joints
   await expect(page.locator('.teach-robot-info')).toContainText('7.000 kg');
   await expect(page.locator('.teach-robot-info')).toContainText('未提供');
   await expect(page.locator('.teach-joint-row').first()).toContainText('85.94');
+  await expect(page.locator('.teach-robot-info')).toContainText('实时姿态 · 跟随关节反馈');
+  const modelValues = () => page.evaluate(async () => {
+    const path = '/node_modules/.vite/deps/@react-three_fiber.js';
+    const { _roots } = await import(path);
+    const canvas = document.querySelector('.teach-robot-preview canvas');
+    const scene = _roots.get(canvas)?.store.getState().scene;
+    const robot = scene?.getObjectByProperty('isURDFRobot', true);
+    return robot ? [robot.joints.hinge.jointValue[0], robot.joints.follower.jointValue[0]] : [];
+  });
+  const setPosition = (position: number) => page.evaluate(async (position) => {
+    const path = '/src/stores/robotStateStore.ts';
+    const { useRobotStateStore } = await import(path);
+    const state = useRobotStateStore.getState().robotState;
+    useRobotStateStore.getState().updateState({ ...state, joint_states: [{ ...state.joint_states[0], position }] });
+  }, position);
+  await expect.poll(modelValues).toEqual([1.5, 3.2]);
   await page.getByRole('button', { name: '暂停模型旋转', exact: true }).click();
   await expect(page.getByRole('button', { name: '继续模型旋转', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await setPosition(0.5);
+  await expect.poll(modelValues).toEqual([0.5, 1.2]);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.teach-model-spin')).toHaveCount(0);
+  await setPosition(0.25);
+  await expect.poll(modelValues).toEqual([0.25, 0.7]);
   await expect(page.locator('.teach-robot-preview canvas')).toBeVisible();
+  await page.screenshot({ path: 'test-results/overview-live-pose.png' });
   expect(robotWrites).toEqual([]);
 });
 

@@ -1,7 +1,7 @@
 {
   "name": "rocos-web",
   "private": true,
-  "version": "3.0.0-rc.10",
+  "version": "3.0.0-rc.11",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
