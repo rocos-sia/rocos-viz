@@ -8,6 +8,7 @@ import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useT } from '@/i18n/useT';
 import { DemoBadge } from './TeachCard';
 import { IOSummary, ProgramList } from './Overview';
+import { ControllerLogs } from './ControllerLogs';
 
 export function ContextPanel() {
   const t = useT();
@@ -48,7 +49,7 @@ export function ContextPanel() {
       { key: 'programs', label: t('teach.programs'), children: <><DemoBadge /><ProgramList /></> },
       { key: 'io', label: t('teach.io'), children: <><DemoBadge /><IOSummary /></> },
       { key: 'alarms', label: t('teach.alarms'), children: <p><DemoBadge /> {t('teach.demoNoAlarms')}</p> },
-      { key: 'logs', label: t('teach.logs'), children: <p><DemoBadge /> 09:42:18 — {t('teach.event.saved')}</p> },
+      { key: 'logs', label: t('teach.logs'), children: <ControllerLogs /> },
     ]} />
     <Modal title={t('teach.rename')} open={!!edit} onCancel={() => setEdit(null)} onOk={() => { if (edit && name.trim()) { renamePoint(edit.id, name.trim()); setEdit(null); } }}>
       <Input aria-label={t('teach.name')} value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />

@@ -10,6 +10,10 @@ import type {
   ControlOwnerData,
   ImpedanceData,
   SetImpedanceBody,
+  ToolFrameList,
+  NamedToolFrame,
+  ToolCalibrationSession,
+  LoadParameters,
 } from './types';
 import {
   DEFAULT_SPEED_FACTOR,
@@ -123,11 +127,32 @@ export class RobotApiClient {
     return id;
   }
 
+  private async parseJsonResponse<T>(response: Response, endpoint: string): Promise<T> {
+    const text = await response.text();
+    console.log(`[RobotApiClient] Response body length: ${text.length}`);
+
+    if (!text.trim()) {
+      throw new Error(`${endpoint} returned an empty response (HTTP ${response.status})`);
+    }
+
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      const preview = text.replace(/\s+/g, ' ').trim().slice(0, 120);
+      const kind = /^<!doctype\s+html|^<html[\s>]/i.test(text.trim()) ? 'an HTML page' : 'non-JSON text';
+      throw new Error(
+        `${endpoint} returned ${kind} (HTTP ${response.status}). ` +
+        `Check the controller host/port and the Vite /api proxy. Response: ${preview}`,
+      );
+    }
+  }
+
   private async request<T>(
     method: string,
     path: string,
     body?: any,
     params?: Record<string, string>,
+    signal?: AbortSignal,
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
@@ -152,6 +177,7 @@ export class RobotApiClient {
     const options: RequestInit = {
       method,
       headers,
+      signal,
     };
 
     if (body !== undefined) {
@@ -161,14 +187,7 @@ export class RobotApiClient {
     const response = await fetch(url.toString(), options);
     console.log(`[RobotApiClient] Response status: ${response.status}`);
 
-    const text = await response.text();
-    console.log(`[RobotApiClient] Response body length: ${text.length}`);
-
-    if (!text) {
-      throw new Error('Empty response from server');
-    }
-
-    const json: ApiResponse<T> = JSON.parse(text);
+    const json = await this.parseJsonResponse<ApiResponse<T>>(response, `${method} ${path}`);
     const profile = json.data as { api_profile?: string } | null;
     if (json.success && profile?.api_profile === 'legacy_robot') {
       RobotApiClient.legacyEndpoints.add(this.baseUrl);
@@ -537,6 +556,54 @@ export class RobotApiClient {
   }
 
   // ─── Calibration ──────────────────────────────────────────────
+
+  async listToolFrames(signal?: AbortSignal): Promise<ToolFrameList> {
+    return this.request('GET', '/api/robot/tool_frames', undefined, undefined, signal);
+  }
+
+  async getToolFrame(name: string, signal?: AbortSignal): Promise<NamedToolFrame> {
+    return this.request('GET', '/api/robot/tool_frame', undefined, { name }, signal);
+  }
+
+  async setToolFrame(name: string, frame: Pose, signal?: AbortSignal, previousName?: string): Promise<NamedToolFrame> {
+    return this.request('POST', '/api/robot/tool_frame', { name, frame, persist: true, ...(previousName ? { previous_name: previousName } : {}) }, undefined, signal);
+  }
+
+  async deleteToolFrame(name: string, signal?: AbortSignal): Promise<void> {
+    return this.request('DELETE', '/api/robot/tool_frame', undefined, { name, persist: 'true' }, signal);
+  }
+
+  async activateToolFrame(name: string, signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/robot/active_tool_frame', { name, persist: true }, undefined, signal);
+  }
+
+  async loadToolFrames(signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/robot/frames/load', {}, undefined, signal);
+  }
+
+  async getLoadParameters(signal?: AbortSignal): Promise<LoadParameters> {
+    return this.request('GET', '/api/robot/load_params', undefined, undefined, signal);
+  }
+
+  async setLoadParameters(mass: number, com: number[], signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/robot/load_params', { mass, com }, undefined, signal);
+  }
+
+  async saveLoadParameters(signal?: AbortSignal): Promise<{ path: string }> {
+    return this.request('POST', '/api/robot/load_params/save', {}, undefined, signal);
+  }
+
+  async captureToolCalibration(name: string, index: number, sessionId?: string, signal?: AbortSignal): Promise<ToolCalibrationSession> {
+    return this.request('POST', '/api/calibration/pose', { name, index, ...(sessionId ? { session_id: sessionId } : {}) }, undefined, signal);
+  }
+
+  async calculateToolCalibration(sessionId: string, maxError: number, signal?: AbortSignal): Promise<ToolCalibrationSession> {
+    return this.request('POST', '/api/calibration/run', { session_id: sessionId, max_error: maxError }, undefined, signal);
+  }
+
+  async getToolCalibration(sessionId: string, signal?: AbortSignal): Promise<ToolCalibrationSession> {
+    return this.request('GET', '/api/calibration/result', undefined, { session_id: sessionId }, signal);
+  }
 
   /**
    * POST /api/calibration/tool — 设置工具坐标系

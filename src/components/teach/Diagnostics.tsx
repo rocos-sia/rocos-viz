@@ -11,6 +11,8 @@ import { RealtimeChart } from '@/components/plot/RealtimeChart';
 import { PlotConfigDialog } from '@/components/plot/PlotConfigDialog';
 import { useT } from '@/i18n/useT';
 import { downloadText } from '@/core/downloadText';
+import { ControllerLogs } from './ControllerLogs';
+import { LogFileActions } from './LogFileActions';
 import { DemoBadge, TeachCard } from './TeachCard';
 
 export function Diagnostics() {
@@ -56,7 +58,7 @@ export function Diagnostics() {
         <table className="teach-table"><thead><tr><th>{t('teach.time')}</th><th>{t('teach.level')}</th><th>{t('teach.description')}</th></tr></thead>
           <tbody><tr><td>09:38:12</td><td><span className="teach-warning">{t('teach.warning')}</span></td><td>{t('teach.alarm.demo')}</td></tr></tbody></table>
       </TeachCard> },
-      { key: 'logs', label: t('teach.logs'), children: <TeachCard title={t('teach.logs')} extra={<DemoBadge />}><div className="teach-log-line">09:42:18 · INFO · {t('teach.log.demo')}</div><div className="teach-log-line">09:40:05 · INFO · {t('teach.event.loaded')}</div></TeachCard> },
+      { key: 'logs', label: t('teach.logs'), children: <TeachCard title={t('teach.logs')} extra={<LogFileActions />}><ControllerLogs /></TeachCard> },
     ]} />
     {configIndex !== null && <PlotConfigDialog open onClose={() => setConfigIndex(null)} chartIndex={configIndex} config={charts[configIndex]} />}
   </div>;

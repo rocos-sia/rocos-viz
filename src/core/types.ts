@@ -186,8 +186,20 @@ export interface SetImpedanceBody {
   };
 }
 
-/** @deprecated 后端 /api/calibration/result 端点未实现（返回 1004） */
 export interface CalibrationResult {
   error_state: boolean;
   pose: Pose;
+  metrics: { rms_error: number; max_error: number; condition_number: number; axis_angle_degrees: number };
+}
+
+export interface ToolFrameList { names: string[]; active: string; file_path: string }
+export interface NamedToolFrame { name: string; frame: Pose }
+export interface LoadParameters { valid: boolean; mass: number; com: [number, number, number] }
+export interface CalibrationSample { index: number; flange: Pose; joints: number[]; timestamp: number }
+export interface ToolCalibrationSession {
+  session_id: string;
+  name: string;
+  samples: (CalibrationSample | null)[];
+  captured: number;
+  result: CalibrationResult | null;
 }

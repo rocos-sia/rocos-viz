@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Button, Drawer, Tabs, Alert, Segmented, Tooltip } from 'antd';
 import { MinusOutlined, PlusOutlined, UndoOutlined, RedoOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { JointJogPanel } from '@/components/control/JointJogPanel';
@@ -60,7 +61,7 @@ export function Teaching({ urdfContent }: { urdfContent: string | null }) {
       <TeachCard title={t('teach.realtime')} extra={!connected && <DemoBadge />}>{stateReadout}</TeachCard>
     </aside>
     <div className="teach-motion-column">
-      <TeachCard title={t('teach.motionControl')} extra={<>{connected ? <span className="teach-muted">{t('teach.continuous')}</span> : <DemoBadge />}<Button className="teach-pad-details" onClick={() => setDetails(true)}>{t('teach.details')}</Button></>} className="teach-jog-card">
+      <TeachCard title={t('teach.motionControl')} extra={<><Link to="/devices?tab=tool"><Button>{t('tools.manage')}</Button></Link>{!connected && <DemoBadge />}<Button className="teach-pad-details" onClick={() => setDetails(true)}>{t('teach.details')}</Button></>} className="teach-jog-card">
         {connected && (!enabled || !token) && <Alert type="warning" showIcon message={t('teach.jogReason')} />}
         <div className="teach-control-mode"><WorkModeSelector /><div className="teach-jog-reference"><FrameSelector /></div></div>
         <Tabs activeKey={active} onChange={setActive} tabBarExtraContent={active === 'jog' ? <Tooltip title={t('teach.hold')}><span className="teach-jog-hint" tabIndex={0} aria-label={t('teach.hold')}><span className="teach-jog-hint-text">{t('teach.hold')}</span><InfoCircleOutlined className="teach-jog-hint-icon" /></span></Tooltip> : undefined} items={[

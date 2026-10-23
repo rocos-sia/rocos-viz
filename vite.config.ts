@@ -4,6 +4,7 @@ import path from 'path';
 
 const ROBOT_HOST = process.env.ROBOT_HOST || '127.0.0.1';
 const ROBOT_PORT = process.env.ROBOT_PORT || '8080';
+const DIAGNOSTICS_PORT = process.env.DIAGNOSTICS_PORT || '8082';
 const VITE_PORT = parseInt(process.env.VITE_PORT || '5173', 10);
 
 export default defineConfig({
@@ -35,6 +36,10 @@ export default defineConfig({
       usePolling: true,
     },
     proxy: {
+      '/api/logs': {
+        target: `http://${ROBOT_HOST}:${DIAGNOSTICS_PORT}`,
+        changeOrigin: true,
+      },
       '/api': {
         target: `http://${ROBOT_HOST}:${ROBOT_PORT}`,
         changeOrigin: true,

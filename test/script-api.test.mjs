@@ -93,3 +93,14 @@ test('rejects an unexpected JSON success envelope instead of treating it as Lua'
   }), { headers: { 'Content-Type': 'application/json' } }));
   await assert.rejects(client.downloadScript('example.lua'), /expected Lua source/);
 });
+
+test('explains when the API endpoint returns an HTML error page', async (t) => {
+  const client = mockClient(t, async () => new Response(
+    '<html><body><h1>404 Not Found</h1></body></html>',
+    { status: 404, headers: { 'Content-Type': 'text/html' } },
+  ));
+  await assert.rejects(
+    client.listScripts(),
+    /GET \/api\/script\/list returned an HTML page \(HTTP 404\).*Vite \/api proxy/,
+  );
+});

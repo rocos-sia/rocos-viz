@@ -20,8 +20,6 @@ export const demoPrograms = [
 
 interface TeachState {
   reducedMotion: boolean;
-  tool: { name: string; payload: number };
-  setTool: (tool: { name: string; payload: number }) => void;
   points: TeachPoint[];
   outputs: boolean[];
   demoRunning: boolean;
@@ -42,8 +40,6 @@ interface TeachState {
 
 export const useTeachStore = create<TeachState>()(persist((set) => ({
   reducedMotion: false,
-  tool: { name: 'TCP_01', payload: 2 },
-  setTool: (tool) => set({ tool }),
   points: [
     { id: 'P001', name: 'Home', joints: demoJoints, position: demoPosition, source: 'demo' },
     { id: 'P002', name: 'Approach', joints: [10, -20, 35, 0, 45, 0, 0], position: [512.66, -98.23, 210.45], source: 'demo' },
@@ -66,5 +62,5 @@ export const useTeachStore = create<TeachState>()(persist((set) => ({
   setWorkspace: (workspace) => set({ workspace }),
 }), {
   name: 'rocos-teach-drafts',
-  partialize: ({ reducedMotion, points, source, workspace, tool }) => ({ reducedMotion, points, source, workspace, tool }),
+  partialize: ({ reducedMotion, points, source, workspace }) => ({ reducedMotion, points, source, workspace }),
 }));

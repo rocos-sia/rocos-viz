@@ -4,6 +4,8 @@ import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router';
 import { AppstoreOutlined, AimOutlined, CodeOutlined, PlayCircleOutlined, ApiOutlined, LineChartOutlined, SettingOutlined, PauseOutlined, CaretRightOutlined, RobotOutlined } from '@ant-design/icons';
 import { useControllerSession } from '@/hooks/useControllerSession';
 import { useTelemetryCollector } from '@/hooks/useTelemetryCollector';
+import { useRobotLogs } from '@/hooks/useRobotLogs';
+import { useToolCalibrationSession } from '@/hooks/useToolCalibrationSession';
 import { useMotionScope } from '@/hooks/useMotionScope';
 import { useTeachStore } from '@/stores/teachStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -107,6 +109,8 @@ export function TeachShell() {
   const t = useT();
   const session = useControllerSession();
   useTelemetryCollector();
+  useRobotLogs();
+  useToolCalibrationSession();
   const location = useLocation();
   const reducedMotion = useTeachStore((s) => s.reducedMotion);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
