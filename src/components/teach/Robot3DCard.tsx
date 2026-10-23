@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { AxesIndicator } from '@/scene/AxesIndicator';
 import { RobotViewer } from '@/scene/RobotViewer';
 import { RobotModel } from '@/scene/RobotModel';
+import { ToolFrameAxes } from '@/scene/ToolFrameAxes';
 import { SceneErrorBoundary } from '@/scene/SceneErrorBoundary';
 import { setCameraPreset } from '@/scene/CameraPresets';
 import { RobotApiClient } from '@/core/RobotApiClient';
@@ -134,6 +135,7 @@ export function Robot3DCardScene({ urdfContent, active }: { urdfContent: string 
         <RobotViewer active={active}>
           <AxesIndicator />
           {connected ? <RobotModel urdfContent={urdfContent} meshBasePath={new RobotApiClient(host, port).getMeshBaseUrl()} /> : <DemoRobot />}
+          {connected && urdfContent && <ToolFrameAxes />}
           {connected && active && <TrajectoryLineWrapper />}
         </RobotViewer>
       </SceneErrorBoundary>

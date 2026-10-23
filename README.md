@@ -28,6 +28,8 @@ ROCOS 机器人可视化与控制 Web 前端。通过浏览器查看机械臂三
 
 手动示教顶部“显示坐标系”选择“工具”时，显示当前 TCP 相对基坐标系的实时位姿，优先直接读取 App 的 `state.tcp`；法兰显示仍使用 `state.flange`。工具列表中的位姿是固定的“法兰到 TCP”偏置。新版 App 返回 `tcp: null` 时显示不可用；旧 App 缺少该字段时兼容在前端合成。无活动工具时 TCP 按法兰处理。查询指定工具可使用只读 `GET /api/robot/tcp?name=tool1`，省略 name 使用当前工具，不会切换激活工具。
 
+连接控制器并加载模型后，3D 视图和总览预览会自动显示当前工具的 TCP 坐标轴（X 红、Y 绿、Z 蓝），标注 `TCP · 工具名`，随实时位姿和工具切换更新。工具轴独立于关节轴开关；未激活工具、断开连接或 TCP 位姿不可用时隐藏。
+
 完整数学约定与后端部署步骤见 App 的 `docs/tool_calibration.md`；接口以 [Apifox](https://app.apifox.com/project/8387612) 为准。浏览器流程测试：`npx playwright test test/browser/tooling.spec.ts`（模拟控制器，无真实运动）。
 
 ### 当前功能边界

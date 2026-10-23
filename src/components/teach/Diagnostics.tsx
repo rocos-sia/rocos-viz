@@ -1,7 +1,7 @@
 import { useUnitStore } from '@/stores/unitStore';
 import { chartUnit } from '@/core/Units';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Select, Tabs } from 'antd';
+import { Button, Select, Tabs } from 'antd';
 import { PauseOutlined, PlayCircleOutlined, DownloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { telemetryBuffer } from '@/core/TelemetryBuffer';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -53,11 +53,6 @@ export function Diagnostics() {
           <RealtimeChart config={chart} data={data[i]} />
         </TeachCard>)}</div>
       </> },
-      { key: 'alarms', label: t('teach.alarmHistory'), children: <TeachCard title={t('teach.alarmHistory')} extra={<DemoBadge />}>
-        <Alert type="info" message={t('teach.pendingNotice')} />
-        <table className="teach-table"><thead><tr><th>{t('teach.time')}</th><th>{t('teach.level')}</th><th>{t('teach.description')}</th></tr></thead>
-          <tbody><tr><td>09:38:12</td><td><span className="teach-warning">{t('teach.warning')}</span></td><td>{t('teach.alarm.demo')}</td></tr></tbody></table>
-      </TeachCard> },
       { key: 'logs', label: t('teach.logs'), children: <TeachCard title={t('teach.logs')} extra={<LogFileActions />}><ControllerLogs /></TeachCard> },
     ]} />
     {configIndex !== null && <PlotConfigDialog open onClose={() => setConfigIndex(null)} chartIndex={configIndex} config={charts[configIndex]} />}

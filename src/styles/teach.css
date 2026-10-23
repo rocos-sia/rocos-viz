@@ -625,3 +625,23 @@ small { font-size: var(--font-caption); }
 @container workspace (max-width: 700px) {
   .teach-card { --teach-card-padding: 16px; --teach-card-header-padding-y: 12px; }
 }
+.scene-tool-frame-label {
+  display: block;
+  transform: translate(12px, 12px);
+  padding: 3px 7px;
+  border: 1px solid var(--teach-border);
+  border-radius: 6px;
+  color: var(--teach-text);
+  background: var(--teach-card);
+  box-shadow: 0 2px 6px #00000018;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+}
+.scene-tool-axis-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 0 3px var(--teach-card);
+  user-select: none;
+}

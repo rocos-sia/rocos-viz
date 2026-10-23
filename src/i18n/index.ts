@@ -264,7 +264,6 @@ const DICT = {
   'teach.window': { en: 'Time window', zh: '时间窗口' },
   'teach.minute': { en: 'min', zh: '分钟' },
   'teach.chartHint': { en: '10 Hz display · original samples retained in bounded buffers', zh: '10 Hz 显示刷新 · 有界缓存保留原始采样' },
-  'teach.alarmHistory': { en: 'Alarm history', zh: '报警记录' },
   'teach.level': { en: 'Level', zh: '级别' },
   'teach.time': { en: 'Time', zh: '时间' },
   'teach.currentTime': { en: 'Current time', zh: '当前时间' },
@@ -274,7 +273,6 @@ const DICT = {
   'teach.description': { en: 'Description', zh: '说明' },
   'teach.info': { en: 'Info', zh: '信息' },
   'teach.warning': { en: 'Warning', zh: '警告' },
-  'teach.alarm.demo': { en: 'Sample: tool communication timeout, recovered', zh: '示例：工具通信超时，已恢复' },
   'teach.log.demo': { en: 'Sample workspace initialized', zh: '示例工作空间已初始化' },
   'teach.programLibrary': { en: 'Program library', zh: '程序库' },
   'teach.luaEditor': { en: 'Lua editor', zh: 'Lua 编辑' },
@@ -329,6 +327,7 @@ const DICT = {
   'view.right': { en: 'Right', zh: '右视图' },
   'scene.views': { en: 'Camera views', zh: '相机视图' },
   'scene.options': { en: 'Scene display options', zh: '场景显示选项' },
+  'scene.toolFrame': { en: 'Tool frame', zh: '工具坐标系' },
 
   // ---- Connection ----
   'conn.connected': { en: 'Connected', zh: '已连接' },
