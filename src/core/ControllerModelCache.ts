@@ -1,5 +1,6 @@
 import { Mesh, type Material } from 'three';
 import type { URDFRobot } from 'urdf-loader';
+import type { ToolPackage } from './types';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { RobotApiClient } from './RobotApiClient';
 import { disposePreviewRobot, loadPreviewRobot, readRobotDescription } from './RobotPreview';
@@ -54,6 +55,32 @@ export function getControllerUrdf(client: RobotApiClient): Promise<string> {
   return pending;
 }
 
+export function getToolUrdf(client: RobotApiClient, tool: Pick<ToolPackage, 'name' | 'digest' | 'urdf'>): Promise<string> {
+  const key = client.toolAssetUrl(tool, tool.urdf);
+  let pending = descriptions.get(key);
+  if (!pending) {
+    pending = fetch(key).then(async response => {
+      if (!response.ok || !(response.headers.get('content-type') ?? '').includes('xml')) throw new Error('Unable to load tool URDF');
+      const document = readRobotDescription(await response.text()).document;
+      for (const mesh of document.querySelectorAll('mesh[filename]')) {
+        const filename = mesh.getAttribute('filename')!;
+        const segments = filename.startsWith('package://') ? filename.slice(10).split('/').slice(1)
+          : [...tool.urdf.split('/').slice(0, -1), ...filename.split('/')];
+        const normalized: string[] = [];
+        for (const part of segments) {
+          if (part === '..') normalized.pop();
+          else if (part && part !== '.') normalized.push(part);
+        }
+        const relative = normalized.join('/');
+        mesh.setAttribute('filename', `package://${tool.name}/${relative}`);
+      }
+      return new XMLSerializer().serializeToString(document);
+    }).catch(error => { if (descriptions.get(key) === pending) descriptions.delete(key); throw error; });
+    descriptions.set(key, pending);
+  }
+  return pending;
+}
+
 function modelEntry(xml: string, meshBase: string): ModelEntry {
   const key = JSON.stringify([meshBase, xml]);
   const cached = models.get(key);
@@ -62,7 +89,7 @@ function modelEntry(xml: string, meshBase: string): ModelEntry {
     users: 0,
     retired: false,
     promise: Promise.resolve().then(() => loadPreviewRobot(readRobotDescription(xml).document,
-      (path) => `${meshBase}?path=${encodeURIComponent(path)}`)),
+      (path) => { const url = new URL(meshBase, window.location.origin); url.searchParams.set('path', path); return url.href; })),
   };
   entry.promise = entry.promise.then((robot) => {
     entry.robot = robot;

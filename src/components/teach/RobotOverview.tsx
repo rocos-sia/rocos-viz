@@ -15,6 +15,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useT } from '@/i18n/useT';
 import { SceneErrorBoundary } from '@/scene/SceneErrorBoundary';
 import { ToolFrameAxes } from '@/scene/ToolFrameAxes';
+import { ToolPackageModel } from '@/scene/ToolPackageModel';
 import { SceneSlot } from './SceneSlot';
 
 function Turntable({ robot, rotating, connected }: { robot: URDFRobot; rotating: boolean; connected: boolean }) {
@@ -37,6 +38,7 @@ function Turntable({ robot, rotating, connected }: { robot: URDFRobot; rotating:
   return <group ref={group}><group position={[-center.x, -center.y, -center.z]}>
     <primitive object={robot} dispose={null} />
     {connected && <ToolFrameAxes />}
+    {connected && <ToolPackageModel />}
   </group></group>;
 }
 

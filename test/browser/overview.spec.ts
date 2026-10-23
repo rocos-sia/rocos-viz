@@ -48,11 +48,15 @@ test('URDF metadata, zero pose, mimic offset and camera fitting use model data',
 
 test('overview follows live joints even when rotation is paused or reduced', async ({ page }) => {
   const robotWrites: string[] = [];
+  let position = 1.5;
   await page.addInitScript(() => sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true }, version: 0 })));
   await page.route('**/api/**', async (route) => {
     // The existing connection lifecycle acquires control; preview must not send robot commands.
     if (route.request().method() !== 'GET' && route.request().url().includes('/api/robot/')) robotWrites.push(route.request().url());
     if (new URL(route.request().url()).pathname === '/api/robot/urdf') return route.fulfill({ contentType: 'text/xml', body: fixture });
+    if (new URL(route.request().url()).pathname === '/api/robot/state') return route.fulfill({ json: { success: true, code: 0, data: {
+      robot_state: 'IDLE', joint_states: [{ name: 'hinge', position, velocity: 0, torque: 0, status: 2 }],
+    } } });
     return route.fulfill({ json: { success: true, code: 0, data: { has_owner: true, owner_client_id: 'other-client', joint_infos: [] } } });
   });
   await page.routeWebSocket('**/ws/robot_state', (socket) => socket.send(JSON.stringify({ robot_state: 'IDLE', joint_states: [{ name: 'hinge', position: 1.5, velocity: 0, torque: 0, status: 2 }] })));
@@ -71,12 +75,12 @@ test('overview follows live joints even when rotation is paused or reduced', asy
     const robot = scene?.getObjectByProperty('isURDFRobot', true);
     return robot ? [robot.joints.hinge.jointValue[0], robot.joints.follower.jointValue[0]] : [];
   });
-  const setPosition = (position: number) => page.evaluate(async (position) => {
+  const setPosition = async (next: number) => { position = next; await page.evaluate(async (position) => {
     const path = '/src/stores/robotStateStore.ts';
     const { useRobotStateStore } = await import(path);
     const state = useRobotStateStore.getState().robotState;
     useRobotStateStore.getState().updateState({ ...state, joint_states: [{ ...state.joint_states[0], position }] });
-  }, position);
+  }, next); };
   await expect.poll(modelValues).toEqual([1.5, 3.2]);
   await page.getByRole('button', { name: '暂停模型旋转', exact: true }).click();
   await expect(page.getByRole('button', { name: '继续模型旋转', exact: true })).toHaveAttribute('aria-pressed', 'true');

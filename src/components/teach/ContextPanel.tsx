@@ -34,8 +34,8 @@ export function ContextPanel() {
   };
   return <section className={`teach-card teach-context ${collapsed ? 'collapsed' : ''}`}>
     <Tabs defaultActiveKey="points" tabBarExtraContent={<div className="teach-context-actions">
-      <Tooltip title={t('teach.recordPoint')}><Button type="primary" aria-label={t('teach.recordPoint')} icon={<PlusOutlined />} onClick={record}><span className="teach-context-button-label">{t('teach.recordPoint')}</span></Button></Tooltip>
-      <Tooltip title={t(collapsed ? 'teach.expand' : 'teach.collapse')}><Button aria-label={t(collapsed ? 'teach.expand' : 'teach.collapse')} icon={collapsed ? <UpOutlined /> : <DownOutlined />} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="teach-context-button-label">{t(collapsed ? 'teach.expand' : 'teach.collapse')}</span></Button></Tooltip>
+      <Tooltip rootClassName="teach-context-tooltip" title={t('teach.recordPoint')}><Button type="primary" aria-label={t('teach.recordPoint')} icon={<PlusOutlined />} onClick={record}><span className="teach-context-button-label">{t('teach.recordPoint')}</span></Button></Tooltip>
+      <Tooltip rootClassName="teach-context-tooltip" title={t(collapsed ? 'teach.expand' : 'teach.collapse')}><Button aria-label={t(collapsed ? 'teach.expand' : 'teach.collapse')} icon={collapsed ? <UpOutlined /> : <DownOutlined />} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="teach-context-button-label">{t(collapsed ? 'teach.expand' : 'teach.collapse')}</span></Button></Tooltip>
     </div>} items={[
       { key: 'points', label: `${t('teach.points')} (${points.length})`, children: <div className="teach-table-scroll">
         <div className="teach-context-caption">{t('teach.localPoints', { unit: units.length.label })}</div>

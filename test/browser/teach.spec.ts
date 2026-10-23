@@ -93,6 +93,12 @@ test('controller session survives navigation; releasing and leaving jog sends st
   const powerCommands: string[] = [];
   const cartesianCommands: { twist: number[]; frame: string }[] = [];
   let sockets = 0;
+  let enabled = true;
+  const telemetry = () => ({ active_tool_frame_name: 'TCP_live', active_object_frame_name: 'Fixture_live',
+    active_tool_frame: { position: { x: 0.125, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } },
+    is_enabled: enabled, robot_state: 'IDLE', work_mode: 'position',
+    joint_states: Array.from({ length: 7 }, (_, i) => ({ name: `joint_${i + 1}`, position: 0, velocity: 0, torque: 0, status: 2 })),
+    flange: { position: { x: 0, y: 0, z: 0.5 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } });
   await page.addInitScript(() => {
     sessionStorage.setItem('rocos_client_id', 'ui-test-client');
     sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true, isRobotEnabled: true, controlToken: 'ui-test-token' }, version: 0 }));
@@ -100,14 +106,15 @@ test('controller session survives navigation; releasing and leaving jog sends st
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.includes('/jog/')) commands.push(path);
-    if (path === '/api/robot/enable' || path === '/api/robot/disable') powerCommands.push(path);
+    if (path === '/api/robot/enable' || path === '/api/robot/disable') { powerCommands.push(path); enabled = path.endsWith('/enable'); }
     if (path.endsWith('/jog/cartesian')) cartesianCommands.push(route.request().postDataJSON());
     if (path === '/api/robot/urdf') return route.fulfill({ contentType: 'text/xml', body: '<robot name="test"><link name="base"/></robot>' });
+    if (path === '/api/robot/state') return route.fulfill({ json: { success: true, code: 0, data: telemetry() } });
     await route.fulfill({ json: { success: true, code: 0, message: 'ok', data: { has_owner: true, owner_client_id: 'ui-test-client', heartbeat_interval_seconds: 1, scripts: [] } } });
   });
   await page.routeWebSocket('**/ws/robot_state', (socket) => {
     sockets++;
-    socket.send(JSON.stringify({ active_tool_frame_name: 'TCP_live', active_object_frame_name: 'Fixture_live', active_tool_frame: { position: { x: 0.125, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } }, is_enabled: true, robot_state: 'IDLE', work_mode: 'position', joint_states: Array.from({ length: 7 }, (_, i) => ({ name: `joint_${i + 1}`, position: 0, velocity: 0, torque: 0, status: 2 })), flange: { position: { x: 0, y: 0, z: 0.5 }, orientation: { x: 0, y: 0, z: 0, w: 1 } } }));
+    socket.send(JSON.stringify(telemetry()));
   });
   await page.goto('/#/teaching');
   const jog = page.locator('.teach-jog-card .jog-btn').first();

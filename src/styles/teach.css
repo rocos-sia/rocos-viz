@@ -645,3 +645,8 @@ small { font-size: var(--font-caption); }
   text-shadow: 0 0 3px var(--teach-card);
   user-select: none;
 }
+.teach-package-select { display: block; width: min(100%, 400px); margin-top: 20px; }
+.teach-package-pose { border: 1px solid var(--teach-border); border-radius: 8px; margin: 16px 0; padding: 12px; }
+.teach-package-calibration { margin-top: 16px; }
+.teach-package-calibration pre { overflow: auto; max-height: 240px; }
+.teach-context-tooltip { pointer-events: none; }

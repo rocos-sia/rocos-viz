@@ -60,6 +60,7 @@ function mapState(raw: any): RobotState {
     tcp: raw.tcp,
     active_tool_frame: raw.active_tool_frame,
     active_tool_frame_name: raw.active_tool_frame_name,
+    active_tool_package: raw.active_tool_package,
     active_object_frame: raw.active_object_frame,
     active_object_frame_name: raw.active_object_frame_name,
     hw_state: raw.hw_state ?? {},
@@ -605,6 +606,51 @@ export class RobotApiClient {
 
   async getToolCalibration(sessionId: string, signal?: AbortSignal): Promise<ToolCalibrationSession> {
     return this.request('GET', '/api/calibration/result', undefined, { session_id: sessionId }, signal);
+  }
+
+  async updateToolPackage(tool: import('./types').ToolPackage, mount: import('./types').Pose, tcp: import('./types').Pose, signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/robot/tool_package/overrides', { name: tool.name, digest: tool.digest, revision: tool.revision, mount, tcp }, undefined, signal);
+  }
+
+  async savePackageCalibration(sessionId: string, signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/calibration/save', { session_id: sessionId }, undefined, signal);
+  }
+
+  async reloadToolPackages(signal?: AbortSignal): Promise<void> {
+    return this.request('POST', '/api/robot/tool_packages/reload', {}, undefined, signal);
+  }
+
+  toolAssetUrl(tool: Pick<import('./types').ToolPackage, 'name' | 'digest'>, path?: string): string {
+    const url = new URL('/api/robot/tool_package/asset', this.baseUrl);
+    url.searchParams.set('name', tool.name); url.searchParams.set('digest', tool.digest);
+    if (path !== undefined) url.searchParams.set('path', path);
+    return url.href;
+  }
+
+  async importToolFile(file: File, installation: boolean, expectedDigest?: string, signal?: AbortSignal): Promise<void> {
+    const token = RobotApiClient.getStoredToken();
+    if (!token) throw new Error('No control right (code: 3006)');
+    const url = new URL(installation ? '/api/robot/tool_package/installation' : '/api/robot/tool_packages/import', this.baseUrl);
+    if (expectedDigest) url.searchParams.set('expected_digest', expectedDigest);
+    const response = await fetch(url, { method: 'POST', body: file, signal, headers: {
+      'Content-Type': installation ? 'application/yaml' : 'application/zip',
+      'X-Rocos-Control-Token': token, 'X-Rocos-Client-Id': RobotApiClient.getClientId(),
+    } });
+    const result = await this.parseJsonResponse<ApiResponse>(response, `POST ${url.pathname}`);
+    if (!response.ok || !result.success) throw new Error(`${result.message} (code: ${result.code})`);
+  }
+
+  async exportToolFile(name: string, installation: boolean, calibratedVersion?: string, signal?: AbortSignal): Promise<Blob> {
+    const url = new URL(installation ? '/api/robot/tool_package/installation' : '/api/robot/tool_package/export', this.baseUrl);
+    url.searchParams.set('name', name);
+    if (calibratedVersion) { url.searchParams.set('calibrated', 'true'); url.searchParams.set('package_version', calibratedVersion); }
+    const response = await fetch(url, { signal });
+    const type = response.headers.get('content-type') ?? '';
+    if (!response.ok || !type.includes(installation ? 'application/yaml' : 'application/zip')) {
+      const error = await this.parseJsonResponse<ApiResponse>(response, `GET ${url.pathname}`);
+      throw new Error(`${error.message || 'Unexpected file response'} (code: ${error.code})`);
+    }
+    return response.blob();
   }
 
   /**

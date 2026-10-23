@@ -72,8 +72,9 @@ test('HTTP state parsing preserves TCP null, valid poses and legacy absence', as
   let raw;
   const client = mockClient(t, async () => response(raw));
   for (const tcp of [pose(4, 5, 6), null, undefined]) {
-    raw = { ...base, tcp };
+    raw = { ...base, tcp, active_tool_package: { name: 'tool1', digest: 'abc', mount: pose(0, 0, 0.1), tcp: pose(0.01, 0, 0) } };
     assert.deepEqual((await client.getRobotState()).tcp, tcp);
+    assert.deepEqual((await client.getRobotState()).active_tool_package, raw.active_tool_package);
   }
   raw = { joint_states: [], tcp: null };
   assert.equal((await client.getRobotState()).flange, undefined);
@@ -94,9 +95,51 @@ test('WebSocket state parsing preserves the same TCP contract as HTTP', (t) => {
   t.after(() => { client.disconnect(); Object.assign(globalThis, original); });
   client.connect('127.0.0.1', 8080, (state) => { received = state; });
   for (const tcp of [pose(4, 5, 6), null, undefined]) {
-    socket.onmessage({ data: JSON.stringify({ ...base, tcp }) });
+    const active_tool_package = { name: 'tool1', digest: 'abc', mount: pose(0, 0, 0.1), tcp: pose(0.01, 0, 0) };
+    socket.onmessage({ data: JSON.stringify({ ...base, tcp, active_tool_package }) });
     assert.deepEqual(received.tcp, tcp);
+    assert.deepEqual(received.active_tool_package, active_tool_package);
   }
   socket.onmessage({ data: JSON.stringify({ joint_states: [], tcp: null }) });
   assert.equal(received.flange, undefined);
+});
+
+test('package uploads send original bytes and both credentials; cancellation and replacement digest are retained', async t => {
+  const file = new File(['PK\0package-bytes'], 'gripper.zip', { type: 'application/zip' });
+  const signal = new AbortController().signal;
+  const client = mockClient(t, async (url, options) => {
+    assert.equal(new URL(url).pathname, '/api/robot/tool_packages/import');
+    assert.equal(new URL(url).searchParams.get('expected_digest'), 'a'.repeat(64));
+    assert.equal(options.method, 'POST'); assert.equal(options.signal, signal);
+    assert.equal(options.headers['Content-Type'], 'application/zip');
+    assert.equal(options.headers['X-Rocos-Control-Token'], 'package-token');
+    assert.equal(options.headers['X-Rocos-Client-Id'], 'package-tab');
+    assert.equal(await options.body.text(), 'PK\0package-bytes'); return response(null);
+  });
+  globalThis.sessionStorage = { getItem: key => key === 'rocos_client_id' ? 'package-tab' : JSON.stringify({ state: { controlToken: 'package-token' } }) };
+  await client.importToolFile(file, false, 'a'.repeat(64), signal);
+});
+
+test('package downloads are read only, encode names and reject JSON or HTML as archive content', async t => {
+  let kind = 'zip';
+  const client = mockClient(t, async (url, options) => {
+    assert.equal(new URL(url).searchParams.get('name'), 'tool.+-1');
+    assert.equal(options.headers, undefined);
+    if (kind === 'zip') return new Response('PK-archive', { headers: { 'content-type': 'application/zip' } });
+    if (kind === 'json') return new Response(JSON.stringify({ success: false, code: 1001, message: 'Package not found' }), { headers: { 'content-type': 'application/json' } });
+    return new Response('<html>404</html>', { status: 404, headers: { 'content-type': 'text/html' } });
+  });
+  assert.equal(await (await client.exportToolFile('tool.+-1', false)).text(), 'PK-archive');
+  kind = 'json'; await assert.rejects(client.exportToolFile('tool.+-1', false), /Package not found/);
+  kind = 'html'; await assert.rejects(client.exportToolFile('tool.+-1', false), /HTML page/);
+});
+
+test('package override and calibration save preserve server revision and session references', async t => {
+  const calls = [];
+  const client = mockClient(t, async (url, options) => { calls.push({ path: new URL(url).pathname, body: JSON.parse(options.body) }); return response(null); });
+  globalThis.sessionStorage = { getItem: key => key === 'rocos_client_id' ? 'package-tab' : JSON.stringify({ state: { controlToken: 'package-token' } }) };
+  await client.updateToolPackage({ name: 'gripper', digest: 'abc', revision: 3 }, pose(0, 0, 0.04), pose(0, 0, 0.14));
+  await client.savePackageCalibration('cal-frozen');
+  assert.deepEqual(calls, [{ path: '/api/robot/tool_package/overrides', body: { name: 'gripper', digest: 'abc', revision: 3, mount: pose(0, 0, 0.04), tcp: pose(0, 0, 0.14) } },
+    { path: '/api/calibration/save', body: { session_id: 'cal-frozen' } }]);
 });

@@ -12,6 +12,7 @@ import { useUnits } from '@/stores/unitStore';
 import { useT } from '@/i18n/useT';
 import { TeachCard } from './TeachCard';
 import { ToolPayloadPanel } from './ToolPayloadPanel';
+import { ToolPackagesPanel } from './ToolPackagesPanel';
 
 const axes = ['X', 'Y', 'Z', 'RX', 'RY', 'RZ'];
 const validName = (value: string) => /^[A-Za-z0-9_.-]{1,64}$/.test(value);
@@ -29,6 +30,7 @@ export function ToolManager() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState(session ? 'calibration' : 'tools');
+  const [selectedPackage, setSelectedPackage] = useState('');
   const [edit, setEdit] = useState<{ original: string; name: string; values: number[] } | null>(null);
   const allowed = isConnected && !!controlToken && !!list.file_path && !robot?.motion_busy && !robot?.is_running
     && ['STOPPED', 'IDLE'].includes(robot?.robot_state || '');
@@ -46,6 +48,7 @@ export function ToolManager() {
     const controller = new AbortController();
     lifetime.current = controller;
     setTools([]); setList({ names: [], active: '', file_path: '' }); setError(''); setEdit(null); setBusy('');
+    setSelectedPackage(''); setTab(current => current === 'packages' ? 'tools' : current);
     if (isConnected) {
       setBusy('load');
       const synchronize = async () => {
@@ -107,7 +110,13 @@ export function ToolManager() {
     if (!signal.aborted) useToolCalibrationStore.setState({ session: captured });
   });
   const saveResult = () => void run('save-calibration', async (signal) => {
-    if (session?.result) await save(session.name, session.result.pose, signal);
+    if (!session?.result) return;
+    if (tools.find(tool => tool.name === session.name)?.package) {
+      await client.savePackageCalibration(session.session_id, signal);
+      await load(signal);
+      const updated = await client.getToolCalibration(session.session_id, signal);
+      if (!signal.aborted) useToolCalibrationStore.setState({ session: updated });
+    } else await save(session.name, session.result.pose, signal);
   });
 
   return <div className="teach-tool-manager">
@@ -123,9 +132,12 @@ export function ToolManager() {
         <p className="teach-muted">{t('tools.poseHint', { length: units.length.label, angle: units.angle.label })}</p>
         {busy === 'load' ? <div className="teach-log-empty"><Spin /></div> : <div className="teach-table-scroll"><table className="teach-table teach-tool-table">
           <thead><tr><th>{t('teach.name')}</th><th>{t('tools.tcp')}</th><th>{t('teach.actions')}</th></tr></thead>
-          <tbody>{tools.map((tool) => <tr key={tool.name}><td><strong>{tool.name}</strong>{list.active === tool.name && <Tag color="blue">{t('tools.active')}</Tag>}</td><td>{renderPose(tool.frame)}</td><td><div className="teach-button-row">
+          <tbody>{tools.map((tool) => <tr key={tool.name}><td><strong>{tool.name}</strong>{tool.package && <Tag>{t('tools.package')}</Tag>}{list.active === tool.name && <Tag color="blue">{t('tools.active')}</Tag>}</td><td>{renderPose(tool.frame)}</td><td><div className="teach-button-row">
             <Button disabled={!allowed || !!busy || list.active === tool.name} onClick={() => activate(tool.name)}>{t('tools.activate')}</Button>
-            <Button aria-label={`${t('tools.edit')} ${tool.name}`} icon={<EditOutlined aria-hidden="true" />} disabled={!allowed || !!busy} onClick={() => setEdit({ original: tool.name, name: tool.name, values: toolPoseValues(tool.frame) })} />
+            <Button aria-label={`${t('tools.edit')} ${tool.name}`} icon={<EditOutlined aria-hidden="true" />} disabled={!allowed || !!busy} onClick={() => {
+              if (tool.package) { setSelectedPackage(tool.name); setTab('packages'); }
+              else setEdit({ original: tool.name, name: tool.name, values: toolPoseValues(tool.frame) });
+            }} />
             <Popconfirm title={t('tools.deleteConfirm', { name: tool.name })} onConfirm={() => run('delete', async (signal) => { await client.deleteToolFrame(tool.name, signal); await load(signal); })}>
               <Button danger aria-label={`${t('tools.delete')} ${tool.name}`} icon={<DeleteOutlined aria-hidden="true" />} disabled={!allowed || !!busy} />
             </Popconfirm>
@@ -136,6 +148,7 @@ export function ToolManager() {
             <Button disabled={!allowed || !!busy}>{t('tools.reload')}</Button>
           </Popconfirm><span className="teach-muted">{t('tools.persistHint')}</span></div>
       </TeachCard><ToolPayloadPanel allowed={allowed && !busy} /></div> },
+      ...(list.package_support ? [{ key: 'packages', label: t('tools.packages'), children: <ToolPackagesPanel tools={tools} allowed={allowed} busy={!!busy} client={client} run={run} reload={load} robotId={list.robot_id} error={error} selectedName={selectedPackage} onSelect={setSelectedPackage} /> }] : []),
       { key: 'calibration', label: t('tools.sixPoint'), children: <TeachCard title={t('tools.sixPoint')}>
         <Alert type="info" showIcon message={t('tools.sixGuide')} description={t('tools.sixGuideDetail')} />
         <div className="teach-tool-calibration-controls">

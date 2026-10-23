@@ -56,6 +56,7 @@ export interface RobotState {
   tcp?: Pose | null;
   active_tool_frame?: Pose;
   active_tool_frame_name?: string;
+  active_tool_package?: ToolPackage | null;
   active_object_frame?: Pose;
   active_object_frame_name?: string;
   hw_state?: HardwareInfo;
@@ -194,8 +195,12 @@ export interface CalibrationResult {
   metrics: { rms_error: number; max_error: number; condition_number: number; axis_angle_degrees: number };
 }
 
-export interface ToolFrameList { names: string[]; active: string; file_path: string }
-export interface NamedToolFrame { name: string; frame: Pose }
+export interface ToolPackage {
+  name: string; package_version: string; digest: string; revision: number; urdf: string;
+  mount: Pose; tcp: Pose; default_mount?: Pose; default_tcp?: Pose; calibration_yaml?: string;
+}
+export interface ToolFrameList { names: string[]; active: string; file_path: string; package_support?: boolean; robot_id?: string }
+export interface NamedToolFrame { name: string; frame: Pose; package?: ToolPackage }
 export interface LoadParameters { valid: boolean; mass: number; com: [number, number, number] }
 export interface CalibrationSample { index: number; flange: Pose; joints: number[]; timestamp: number }
 export interface ToolCalibrationSession {

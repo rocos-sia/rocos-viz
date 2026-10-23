@@ -46,6 +46,7 @@ function mapState(raw: any): RobotState {
     tcp: raw.tcp,
     active_tool_frame: raw.active_tool_frame,
     active_tool_frame_name: raw.active_tool_frame_name,
+    active_tool_package: raw.active_tool_package,
     active_object_frame: raw.active_object_frame,
     active_object_frame_name: raw.active_object_frame_name,
     hw_state: raw.hw_state ?? {},
