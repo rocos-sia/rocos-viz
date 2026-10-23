@@ -26,6 +26,8 @@ ROCOS 机器人可视化与控制 Web 前端。通过浏览器查看机械臂三
 
 工具 XYZ/RPY 跟随全局显示单位，传输使用米和四元数。新增、编辑、重命名、删除和激活均持久化到 App 的 `robot.frames`（默认配置目录下 `frames.yaml`），失败会显示错误；页面不会在本地伪造成功结果。写操作要求控制权及 IDLE/STOPPED 状态。工具质量与质心是控制器全局负载，独立于命名 TCP，切换工具不会自动切换负载。
 
+手动示教顶部“显示坐标系”选择“工具”时，显示当前 TCP 相对基坐标系的实时位姿，优先直接读取 App 的 `state.tcp`；法兰显示仍使用 `state.flange`。工具列表中的位姿是固定的“法兰到 TCP”偏置。新版 App 返回 `tcp: null` 时显示不可用；旧 App 缺少该字段时兼容在前端合成。无活动工具时 TCP 按法兰处理。查询指定工具可使用只读 `GET /api/robot/tcp?name=tool1`，省略 name 使用当前工具，不会切换激活工具。
+
 完整数学约定与后端部署步骤见 App 的 `docs/tool_calibration.md`；接口以 [Apifox](https://app.apifox.com/project/8387612) 为准。浏览器流程测试：`npx playwright test test/browser/tooling.spec.ts`（模拟控制器，无真实运动）。
 
 ### 当前功能边界

@@ -7,7 +7,7 @@ function quaternion(pose: Pose) {
   return new Quaternion(x, y, z, w).normalize();
 }
 
-function validPose(pose: Pose | undefined): pose is Pose {
+function validPose(pose: Pose | null | undefined): pose is Pose {
   if (!pose?.position || !pose.orientation) return false;
   const { x, y, z, w } = pose.orientation;
   const norm = x * x + y * y + z * z + w * w;
@@ -32,6 +32,9 @@ export function preciseReference(frame: number, state: RobotState | null): Pose 
   if (frame === FRAME.BASE) return { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
   if (frame === FRAME.FLANGE) return validPose(state?.flange) ? state.flange : null;
   if (frame === FRAME.OBJECT) return state?.active_object_frame_name && validPose(state.active_object_frame) ? state.active_object_frame : null;
+  // 新 App 统一提供基座到 TCP；明确的 null 不回退，以免掩盖 FK/反馈错误。
+  if (frame === FRAME.TOOL && state?.tcp !== undefined) return validPose(state.tcp) ? state.tcp : null;
+  if (frame === FRAME.TOOL && !state?.active_tool_frame_name) return validPose(state?.flange) ? state.flange : null;
   if (frame === FRAME.TOOL && state?.active_tool_frame_name && validPose(state.flange) && validPose(state.active_tool_frame)) {
     return compose(state.flange, state.active_tool_frame);
   }

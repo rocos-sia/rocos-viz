@@ -7,7 +7,8 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { TrajectoryLine } from '@/scene/TrajectoryLine';
-import { MAX_TRAJECTORY_POINTS } from '@/core/constants';
+import { FRAME, MAX_TRAJECTORY_POINTS } from '@/core/constants';
+import { preciseReference } from '@/core/PreciseMotion';
 import { useT } from '@/i18n/useT';
 import * as THREE from 'three';
 
@@ -130,7 +131,7 @@ export function TrajectoryLineWrapper() {
   useEffect(() => {
     if (!showTrajectory || !robotState) return;
 
-    const pose = robotState.active_tool_frame ?? robotState.flange;
+    const pose = preciseReference(FRAME.TOOL, robotState);
     if (!pose) return;
     const point = new THREE.Vector3(pose.position.x, pose.position.y, pose.position.z);
     pointsRef.current = [...pointsRef.current.slice(-(MAX_TRAJECTORY_POINTS - 1)), point];

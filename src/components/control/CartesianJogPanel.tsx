@@ -5,6 +5,7 @@ import { useT } from '@/i18n/useT';
 import { FRAME } from '@/core/constants';
 import * as THREE from 'three';
 import { CartesianJogLayout } from './CartesianJogLayout';
+import { preciseReference } from '@/core/PreciseMotion';
 
 function quaternionToRPY(q: { x: number; y: number; z: number; w: number }) {
   const euler = new THREE.Euler().setFromQuaternion(
@@ -36,7 +37,7 @@ export function CartesianJogPanel({ compact = false }: { compact?: boolean }) {
       case FRAME.FLANGE:
         return robotState.flange;
       case FRAME.TOOL:
-        return robotState.active_tool_frame ?? robotState.flange;
+        return preciseReference(FRAME.TOOL, robotState);
       case FRAME.OBJECT:
         return robotState.active_object_frame ?? robotState.flange;
       default:

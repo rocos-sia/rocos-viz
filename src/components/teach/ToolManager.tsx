@@ -40,10 +40,6 @@ export function ToolManager() {
     const rows = await Promise.all(next.names.map((name) => client.getToolFrame(name, signal)));
     if (signal.aborted) return;
     setList(next); setTools(rows);
-    const current = useRobotStateStore.getState().robotState;
-    if (current) useRobotStateStore.getState().updateState({ ...current,
-      active_tool_frame_name: next.active, active_tool_frame: rows.find((row) => row.name === next.active)?.frame,
-    });
   }, [client]);
 
   useEffect(() => {

@@ -42,10 +42,7 @@ function mapJointStatus(status: number | string): string {
 }
 
 function mapState(raw: any): RobotState {
-  const flange = raw.flange ?? {
-    position: { x: 0, y: 0, z: 0 },
-    orientation: { x: 0, y: 0, z: 0, w: 1 },
-  };
+  const flange = raw.flange;
 
   return {
     joint_states: (raw.joint_states ?? []).map((j: any) => ({
@@ -60,6 +57,7 @@ function mapState(raw: any): RobotState {
       status: mapJointStatus(j.status ?? 0),
     })),
     flange,
+    tcp: raw.tcp,
     active_tool_frame: raw.active_tool_frame,
     active_tool_frame_name: raw.active_tool_frame_name,
     active_object_frame: raw.active_object_frame,
@@ -563,6 +561,10 @@ export class RobotApiClient {
 
   async getToolFrame(name: string, signal?: AbortSignal): Promise<NamedToolFrame> {
     return this.request('GET', '/api/robot/tool_frame', undefined, { name }, signal);
+  }
+
+  async getTcpPose(name?: string, signal?: AbortSignal): Promise<{ pose: Pose; reference_frame: 'base' }> {
+    return this.request('GET', '/api/robot/tcp', undefined, name ? { name } : undefined, signal);
   }
 
   async setToolFrame(name: string, frame: Pose, signal?: AbortSignal, previousName?: string): Promise<NamedToolFrame> {

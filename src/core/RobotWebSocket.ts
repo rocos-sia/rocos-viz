@@ -28,10 +28,7 @@ function mapJointStatus(status: number | string): string {
 }
 
 function mapState(raw: any): RobotState {
-  const flange = raw.flange ?? {
-    position: { x: 0, y: 0, z: 0 },
-    orientation: { x: 0, y: 0, z: 0, w: 1 },
-  };
+  const flange = raw.flange;
 
   return {
     joint_states: (raw.joint_states ?? []).map((j: any) => ({
@@ -46,6 +43,7 @@ function mapState(raw: any): RobotState {
       status: mapJointStatus(j.status ?? 0),
     })),
     flange,
+    tcp: raw.tcp,
     active_tool_frame: raw.active_tool_frame,
     active_tool_frame_name: raw.active_tool_frame_name,
     active_object_frame: raw.active_object_frame,

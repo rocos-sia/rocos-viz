@@ -9,17 +9,18 @@ test('selected frame is displayed in base coordinates independently of motion an
     sessionStorage.setItem('rocos_client_id', 'frame-client');
     sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true, isRobotEnabled: true, controlToken: 'frame-token', autoLoadModel: false }, version: 0 }));
   });
-  await page.route('**/api/**', async route => {
-    const path = new URL(route.request().url()).pathname;
-    if (/\/(move|jog)/.test(path)) moves.push({ path, body: route.request().postDataJSON() });
-    await route.fulfill({ json: { success: true, code: 0, data: { has_owner: true, owner_client_id: 'frame-client', heartbeat_interval_seconds: 1 } } });
-  });
-  await page.routeWebSocket('**/ws/robot_state', socket => socket.send(JSON.stringify({
+  let controllerState: Record<string, unknown> = {
     is_enabled: true, joint_states: Array.from({ length: 7 }, (_, i) => ({ name: `joint_${i + 1}`, position: 0, velocity: 0, torque: 0 })),
     flange: { position: { x: 1, y: 2, z: 3 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
     active_tool_frame_name: 'tcp', active_tool_frame: { position: { x: 0.1, y: 0, z: 0 }, orientation: { x: Math.SQRT1_2, y: 0, z: 0, w: Math.SQRT1_2 } },
     active_object_frame_name: 'fixture', active_object_frame: { position: { x: 4, y: 5, z: 6 }, orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 } },
-  })));
+  };
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (/\/(move|jog)/.test(path)) moves.push({ path, body: route.request().postDataJSON() });
+    await route.fulfill({ json: { success: true, code: 0, data: path.endsWith('/state') ? controllerState : { has_owner: true, owner_client_id: 'frame-client', heartbeat_interval_seconds: 1 } } });
+  });
+  await page.routeWebSocket('**/ws/robot_state', socket => socket.send(JSON.stringify(controllerState)));
   await page.goto('/#/teaching');
   const selectFrame = async (label: string, frame: string) => {
     await page.locator('.ant-select').filter({ has: page.getByRole('combobox', { name: label, exact: true }) }).click();
@@ -65,17 +66,21 @@ test('selected frame is displayed in base coordinates independently of motion an
   await expect(page.locator('.teach-display-frame .ant-select-selection-item')).toHaveText('工件');
   await expect(page.locator('.teach-jog-reference .ant-select-selection-item')).toHaveText('基座坐标系');
   await expect(readout.first()).toHaveText('4.000');
-  await page.evaluate(async () => {
+  controllerState = await page.evaluate(async () => {
     const path = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(path);
-    useRobotStateStore.getState().updateState({ ...useRobotStateStore.getState().robotState, active_object_frame: undefined });
+    const updated = { ...useRobotStateStore.getState().robotState, active_object_frame: undefined };
+    useRobotStateStore.getState().updateState(updated);
+    return updated;
   });
   await expect(readout).toHaveText(Array(6).fill('—'));
   await expect(page.locator('.teach-state-column')).toContainText('位姿数据不可用');
   await selectFrame('显示坐标系', '工具');
-  await page.evaluate(async () => {
+  controllerState = await page.evaluate(async () => {
     const path = '/src/stores/robotStateStore.ts'; const { useRobotStateStore } = await import(path);
     const state = useRobotStateStore.getState().robotState;
-    useRobotStateStore.getState().updateState({ ...state, flange: { ...state.flange, position: { x: 2, y: 2, z: 3 } } });
+    const updated = { ...state, flange: { ...state.flange, position: { x: 2, y: 2, z: 3 } } };
+    useRobotStateStore.getState().updateState(updated);
+    return updated;
   });
   await expect(readout).toHaveText(['2.000', '2.100', '3.000', '1.571', '0.000', '1.571']);
   await page.evaluate(async () => {
@@ -87,4 +92,37 @@ test('selected frame is displayed in base coordinates independently of motion an
   await expect(page.locator('.ant-select-dropdown:visible .ant-select-item-option-content')).toHaveText(['Flange', 'Tool', 'Workpiece']);
   await page.keyboard.press('Escape');
   await page.screenshot({ path: 'test-results/display-frame-en.png' });
+});
+
+test('controller TCP remains authoritative while flange display stays unchanged and null stays unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('rocos-ui', JSON.stringify({ state: { displayFrame: 100 }, version: 0 }));
+    sessionStorage.setItem('rocos_client_id', 'tcp-client');
+    sessionStorage.setItem('rocos-connection', JSON.stringify({ state: { host: '127.0.0.1', port: '8080', isConnected: true,
+      controlToken: 'tcp-token', autoLoadModel: false }, version: 0 }));
+  });
+  const flange = { position: { x: 1, y: 2, z: 3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
+  let state: object = { joint_states: [], flange, active_tool_frame_name: 'tool1',
+    active_tool_frame: { ...flange, position: { x: 0.01, y: 0, z: 0 } },
+    tcp: { ...flange, position: { x: 4, y: 5, z: 6 } }, robot_state: 'IDLE', is_enabled: false };
+  const moves: string[] = [];
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (/\/(move|jog)/.test(path)) moves.push(path);
+    const data = path.endsWith('/state') ? state : { has_owner: true, owner_client_id: 'tcp-client', heartbeat_interval_seconds: 1 };
+    await route.fulfill({ json: { success: true, code: 0, data } });
+  });
+  await page.routeWebSocket('**/ws/robot_state', socket => socket.close());
+  await page.goto('/#/teaching');
+  const readout = page.locator('.teach-state-column .teach-pose-grid strong');
+  await expect(readout).toHaveText(['4000.000', '5000.000', '6000.000', '0.000', '0.000', '0.000']);
+  state = { ...state, tcp: null };
+  await expect(readout).toHaveText(Array(6).fill('—'));
+  await expect(page.locator('.teach-state-column')).toContainText('位姿数据不可用');
+  state = { ...state, tcp: flange, active_tool_frame_name: '' };
+  await expect(readout).toHaveText(['1000.000', '2000.000', '3000.000', '0.000', '0.000', '0.000']);
+  await page.locator('.teach-display-frame .ant-select').click();
+  await page.locator('.ant-select-dropdown:visible').getByText('法兰', { exact: true }).click();
+  await expect(readout).toHaveText(['1000.000', '2000.000', '3000.000', '0.000', '0.000', '0.000']);
+  expect(moves).toEqual([]);
 });

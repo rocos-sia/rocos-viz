@@ -52,6 +52,8 @@ export interface HardwareInfo {
 export interface RobotState {
   joint_states: JointState[];
   flange?: Pose;
+  /** 基座到当前 TCP；null 表示后端无法求解，缺省表示旧版 App。 */
+  tcp?: Pose | null;
   active_tool_frame?: Pose;
   active_tool_frame_name?: string;
   active_object_frame?: Pose;
