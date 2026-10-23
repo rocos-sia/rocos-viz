@@ -48,7 +48,6 @@ export function ContextPanel() {
       </div> },
       { key: 'programs', label: t('teach.programs'), children: <><DemoBadge /><ProgramList /></> },
       { key: 'io', label: t('teach.io'), children: <><DemoBadge /><IOSummary /></> },
-      { key: 'alarms', label: t('teach.alarms'), children: <p><DemoBadge /> {t('teach.demoNoAlarms')}</p> },
       { key: 'logs', label: t('teach.logs'), children: <ControllerLogs /> },
     ]} />
     <Modal title={t('teach.rename')} open={!!edit} onCancel={() => setEdit(null)} onOk={() => { if (edit && name.trim()) { renamePoint(edit.id, name.trim()); setEdit(null); } }}>
