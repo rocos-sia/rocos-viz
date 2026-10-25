@@ -34,6 +34,8 @@ ROCOS 机器人可视化与控制 Web 前端。通过浏览器查看机械臂三
 
 原始工具包不随本机编辑变化；同名更新 ZIP 需使用不同包版本，并重置本机覆盖，更新前可导出安装配置。安装 YAML 只恢复到相同 robot_id 和相同包摘要。包格式、目录、变换及示例见 App 的 `docs/tool_packages.md` 和 `examples/tool_packages/demo_gripper/`。旧 App 不显示工具包页签，原有工具管理与六点法继续可用。
 
+本仓库的[工具配置说明文档](docs/tool-configuration-guide.md)汇总了工具包目录与 `tool.yaml`、URDF/STL 单位约定、控制器目录与本机覆盖、Viz 操作、六点标定，以及更新、备份恢复和常见问题；飞书版本见[工具配置说明文档](https://rocos-sia.feishu.cn/wiki/CgULwpYfwikcHJkMdz1cYXuJnac)。
+
 完整数学约定与后端部署步骤见 App 的 `docs/tool_calibration.md`；接口以 [Apifox](https://app.apifox.com/project/8387612) 为准。浏览器流程测试：`npx playwright test test/browser/tooling.spec.ts`（模拟控制器，无真实运动）。
 
 ### 当前功能边界
