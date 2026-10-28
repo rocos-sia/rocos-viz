@@ -98,6 +98,25 @@ body { font-size: var(--font-body); line-height: 1.5; color: var(--teach-text); 
 .teach-sidebar nav a.active { color: #fff; background: #2563eb; }
 .teach-sidebar nav a.active::before { content: ''; width: 3px; height: 21px; background: #9bc5ff; position: absolute; left: -12px; border-radius: 0 2px 2px 0; }
 .teach-sidebar nav a:hover:not(.active) { background: #263d5a; }
+.teach-update-dot { position: absolute; right: 12px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+.teach-update-toolbar, .teach-update-toolbar > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.teach-update-toolbar { justify-content: space-between; margin-bottom: 16px; }
+.teach-update-time, .teach-update-cache { color: var(--teach-muted); font-size: var(--font-caption); }
+.teach-update-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.teach-update-component { min-width: 0; border: 1px solid var(--teach-border); border-radius: 10px; padding: 20px; }
+.teach-update-heading, .teach-update-asset > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.teach-update-heading h3 { margin: 0; font-size: var(--font-heading); }
+.teach-update-versions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 20px; margin: 20px 0; }
+.teach-update-versions dt { color: var(--teach-muted); }
+.teach-update-versions dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.teach-update-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.teach-update-notes { margin: 16px 0; }
+.teach-update-notes summary { cursor: pointer; color: var(--teach-primary); }
+.teach-update-notes p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.teach-update-asset { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--teach-border); }
+.teach-update-asset small { display: block; color: var(--teach-muted); overflow-wrap: anywhere; margin-top: 12px; }
+.teach-update-asset code { font-size: 11px; }
+@media (max-width: 1199px) { .teach-update-grid { grid-template-columns: minmax(0, 1fr); } }
 .teach-sidebar-bottom { margin-top: auto; padding: 25px 26px 0; display: flex; flex-direction: column; gap: 7px; color: #a8b9ce; }
 .teach-sidebar-symbol { font-size: 26px; color: #6689ba; }
 .teach-sidebar-bottom small { font-size: var(--font-caption); }

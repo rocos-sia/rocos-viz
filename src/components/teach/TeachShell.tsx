@@ -23,6 +23,9 @@ import { Execution } from './Execution';
 import { Settings } from './Settings';
 import { HeaderAccount } from './HeaderAccount';
 import { PersistentRobotScenes } from './PersistentRobotScenes';
+import { useAutomaticUpdateCheck, useSoftwareUpdates } from '@/hooks/useSoftwareUpdates';
+import { SoftwareUpdateNotifier } from './SoftwareUpdates';
+import { version } from '../../../package.json';
 
 const Programming = lazy(() => import('./Programming').then((m) => ({ default: m.Programming })));
 const Diagnostics = lazy(() => import('./Diagnostics').then((m) => ({ default: m.Diagnostics })));
@@ -107,6 +110,8 @@ function ControlBar() {
 
 export function TeachShell() {
   const t = useT();
+  useAutomaticUpdateCheck();
+  const { attention } = useSoftwareUpdates();
   const session = useControllerSession();
   useTelemetryCollector();
   useRobotLogs();
@@ -117,6 +122,7 @@ export function TeachShell() {
   const page = pages.find((p) => location.pathname === `/${p.id}`) ?? pages[0];
   const root = useMotionScope(location.pathname);
   return <PersistentRobotScenes urdfContent={session.urdfContent}><div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
+    <SoftwareUpdateNotifier />
     <header className="teach-topbar">
       <StatusStrip />
       <HeaderAccount />
@@ -129,9 +135,10 @@ export function TeachShell() {
       </Tooltip>
       <div className="teach-nav-caption">{t('teach.workspace')}</div>
       <nav id="teach-navigation" aria-label={t('teach.workspace')}>{pages.map((item) => <Tooltip key={item.id} title={sidebarCollapsed ? t(`teach.${item.id}`) : undefined} placement="right">
-        <NavLink to={`/${item.id}`} aria-label={t(`teach.${item.id}`)}>{item.icon}<span>{t(`teach.${item.id}`)}</span></NavLink>
+        <NavLink to={`/${item.id}${item.id === 'settings' && attention.length ? '?tab=updates' : ''}`} aria-label={t(`teach.${item.id}`)}>{item.icon}<span>{t(`teach.${item.id}`)}</span>
+          {item.id === 'settings' && attention.length > 0 && <i className="teach-update-dot" role="img" aria-label={t('updates.found')} />}</NavLink>
       </Tooltip>)}</nav>
-      <div className="teach-sidebar-bottom"><span className="teach-sidebar-symbol"><RobotOutlined /></span><strong>ROCOS HMI</strong><small>{t('teach.station')}</small><span className="teach-sidebar-version">v3.0</span></div>
+      <div className="teach-sidebar-bottom"><span className="teach-sidebar-symbol"><RobotOutlined /></span><strong>ROCOS HMI</strong><small>{t('teach.station')}</small><span className="teach-sidebar-version">v{version}</span></div>
     </aside>
     <main className="teach-content" aria-label={t(`teach.${page.id}`)} ref={root}>
       <Suspense fallback={<div className="teach-loading"><Spin /></div>}>

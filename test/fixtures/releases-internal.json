@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "channel": "internal",
+  "updated_at": "2026-10-28T10:12:58.833639+00:00",
+  "components": {
+    "app": {
+      "version": "3.2.0-rc.2",
+      "prerelease": true,
+      "source_repository": "rocos-sia/rocos-app",
+      "tag": "v3.2.0-rc.2",
+      "published_at": "2026-10-28T10:10:03Z",
+      "release_url": "https://github.com/rocos-sia/rocos-releases/releases/tag/app-v3.2.0-rc.2",
+      "notes": "ROCOS app 3.2.0-rc.2\n\nDEB packaging test release. Native binaries target Ubuntu 22.04; Viz contains architecture-independent static files.\n\nThis release has not been validated on robot hardware. Installation does not start services.\n\nVerify downloads with `sha256sum -c SHA256SUMS`. See the repository README for installation paths and dependencies.\n",
+      "compatibility": {
+        "api_version": "3.0.0",
+        "shm_abi_version": 2
+      },
+      "assets": [
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "format": "deb",
+          "size_bytes": 3851952,
+          "sha256": "ee25fef9d50cf76546e13162f0bb15af4e22cc90fd2080c367326f103e3c5b36",
+          "url": "https://github.com/rocos-sia/rocos-releases/releases/download/app-v3.2.0-rc.2/rocos-app_3.2.0-rc.2_amd64.deb",
+          "signature_url": null
+        }
+      ]
+    },
+    "viz": {
+      "version": "3.1.0-rc.6",
+      "prerelease": true,
+      "source_repository": "rocos-sia/rocos-viz",
+      "tag": "v3.1.0-rc.6",
+      "published_at": "2026-10-28T10:09:54Z",
+      "release_url": "https://github.com/rocos-sia/rocos-releases/releases/tag/viz-v3.1.0-rc.6",
+      "notes": "ROCOS viz 3.1.0-rc.6\n\nDEB packaging test release. Native binaries target Ubuntu 22.04; Viz contains architecture-independent static files.\n\nThis release has not been validated on robot hardware. Installation does not start services.\n\nVerify downloads with `sha256sum -c SHA256SUMS`. See the repository README for installation paths and dependencies.\n",
+      "compatibility": {
+        "api_version": "3.0.0",
+        "shm_abi_version": null
+      },
+      "assets": [
+        {
+          "os": "linux",
+          "arch": "all",
+          "format": "deb",
+          "size_bytes": 28725510,
+          "sha256": "7f7cab7080e34b18c92526b2d4a615a4f84e8a2b1b9c53540f9bb54c7ce97437",
+          "url": "https://github.com/rocos-sia/rocos-releases/releases/download/viz-v3.1.0-rc.6/rocos-viz_3.1.0-rc.6_all.deb",
+          "signature_url": null
+        }
+      ]
+    },
+    "ecm": null
+  }
+}

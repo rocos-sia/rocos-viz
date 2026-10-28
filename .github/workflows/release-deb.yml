@@ -25,7 +25,7 @@ jobs:
       - name: Browser regression tests (mock controller)
         run: |
           npx playwright install --with-deps chrome
-          npx playwright test test/browser/overview.spec.ts test/browser/robot-info.spec.ts test/browser/tool-packages.spec.ts --workers=1
+          npx playwright test test/browser/overview.spec.ts test/browser/robot-info.spec.ts test/browser/tool-packages.spec.ts test/browser/software-updates.spec.ts --workers=1
       - name: Package static site
         run: |
           python3 packaging/build_deb.py

@@ -21,6 +21,6 @@ git tag -a v3.1.0-rc.6 -m 'Internal release 3.1.0-rc.6'
 git push origin v3 v3.1.0-rc.6
 ```
 
-随后由 `rocos-sia/rocos-releases` 每小时收录，也可手动同步。已发布版本不覆盖；API 契约版本与软件包版本相互独立。
+随后由 `rocos-sia/rocos-releases` 每天北京时间 08:17 收录，也可手动同步。Viz 在“系统设置 → 软件更新”读取汇总清单并比较版本。已发布版本不覆盖；API 契约版本与软件包版本相互独立。
 
 当前全仓 ESLint 尚有既有的 `any` 和未使用变量问题；发布流水线以 TypeScript 构建、核心测试及浏览器回归作为门禁，不声称全仓 lint 已通过。

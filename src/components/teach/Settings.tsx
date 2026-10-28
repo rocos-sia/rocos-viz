@@ -10,12 +10,16 @@ import { ImpedancePanel } from '@/components/settings/ImpedancePanel';
 import { useT } from '@/i18n/useT';
 import { version } from '../../../package.json';
 import { TeachCard } from './TeachCard';
+import { useSearchParams } from 'react-router';
+import { SoftwareUpdates } from './SoftwareUpdates';
 
 export function Settings({ onDisconnect, onTakeover }: {
   onDisconnect: () => Promise<void>;
   onTakeover: () => Promise<void>;
 }) {
   const t = useT();
+  const [params, setParams] = useSearchParams();
+  const activeTab = ['appearance', 'connection', 'units', 'impedance', 'updates'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'appearance';
   const units = useUnitStore();
   const compact = useCompactScreen();
   const language = useUIStore((s) => s.language);
@@ -26,7 +30,8 @@ export function Settings({ onDisconnect, onTakeover }: {
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);
   const owner = useConnectionStore((s) => s.controlOwnerName ?? s.controlOwnerIp);
-  return <div className="teach-page teach-settings" data-motion><Tabs className="teach-fill-tabs" items={[
+  return <div className="teach-page teach-settings" data-motion><Tabs className="teach-fill-tabs" activeKey={activeTab}
+    onChange={(tab) => setParams((previous) => { const next = new URLSearchParams(previous); next.set('tab', tab); return next; }, { replace: true })} items={[
     { key: 'appearance', label: t('teach.appearance'), children: <div className="teach-two-col">
       <TeachCard title={t('teach.workspace')}>
         <div className="teach-setting-row"><span>{t('teach.appearance')}</span><Segmented value={theme} options={[{ label: t('teach.light'), value: 'light' }, { label: t('teach.dark'), value: 'dark' }]} onChange={(value) => useUIStore.setState({ themeMode: value as 'light' | 'dark' })} /></div>
@@ -61,5 +66,6 @@ export function Settings({ onDisconnect, onTakeover }: {
       </div>
     </TeachCard> },
     { key: 'impedance', label: t('teach.impedance'), children: <TeachCard title={t('teach.impedance')}><p className="teach-muted">{!connected || !token ? t('teach.jogReason') : t('teach.live')}</p><fieldset disabled={compact || !connected || !token} className="teach-fieldset"><ImpedancePanel /></fieldset></TeachCard> },
+    { key: 'updates', label: t('updates.title'), children: <SoftwareUpdates /> },
   ]} /></div>;
 }
