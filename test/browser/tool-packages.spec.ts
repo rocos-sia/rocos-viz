@@ -197,7 +197,8 @@ async function packagePreviewSnapshot(page: Page) {
     const path = '/node_modules/.vite/deps/@react-three_fiber.js';
     const { _roots } = await import(path);
     const state = _roots.get(document.querySelector('.teach-package-preview canvas'))?.store.getState();
-    if (!state) return null;
+    // The Canvas store exists before OrbitControls finishes mounting on CI.
+    if (!state?.controls) return null;
     state.scene.updateMatrixWorld(true);
     const model = state.scene.getObjectByName('package-preview-model');
     return {
@@ -225,6 +226,7 @@ test('selected package preview shows installation and composed TCP after scannin
   await page.getByRole('button', { name:'扫描工具目录', exact:true }).click();
   const preview = page.getByRole('region', { name:'工具模型预览', exact:true });
   await expect(preview).toHaveAttribute('data-model-status', 'ready');
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.modelName)).toBe('Gripper');
   const snapshot = (await packagePreviewSnapshot(page))!;
   expect(snapshot.modelName).toBe('Gripper');
   closeValues(snapshot.model.slice(12, 15), [0.02, 0.03, 0.04]);
@@ -331,6 +333,7 @@ test('package preview fits a narrow workspace and preserves framing across langu
   await preview.scrollIntoViewIfNeeded();
   await expect(preview.locator('canvas')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect.poll(() => packagePreviewSnapshot(page)).not.toBeNull();
   const initialCamera = (await packagePreviewSnapshot(page))!.camera;
   await page.evaluate(async () => { const path='/src/stores/uiStore.ts'; const {useUIStore}=await import(path); useUIStore.setState({language:'en'}); });
   await expect(preview.getByRole('checkbox', { name:'Installation frame', exact:true })).toBeVisible();

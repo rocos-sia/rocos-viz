@@ -9,16 +9,16 @@ npm run build
 python3 packaging/build_deb.py
 cd build/packages
 sha256sum -c SHA256SUMS
-sudo apt install ./rocos-viz_3.1.0~rc.5_all.deb
+sudo apt install ./rocos-viz_3.1.0-rc.6_all.deb
 ```
 
-打包前必须重新构建 `dist/`。包版本取 `package.json`，`3.1.0-rc.5` 转换为 Debian 版本 `3.1.0~rc.5`，Git 标签仍为 `v3.1.0-rc.5`。静态资源升级不自动重启 App；浏览器需刷新页面。
+打包前必须重新构建 `dist/`。包版本取 `package.json`，`3.1.0-rc.6` 转换为 Debian 版本 `3.1.0~rc.6`，Git 标签仍为 `v3.1.0-rc.6`。静态资源升级不自动重启 App；浏览器需刷新页面。
 
 完成版本更新和提交后，推送同号标签会触发 `Build and release DEB`：安装锁定依赖、执行核心与浏览器回归测试、构建、生成 DEB，最后发布本仓库 Release。带 rc 的标签自动设置 **Prerelease**；上传安装包、`release.json`、`SHA256SUMS` 并验证摘要后才公开。手动运行工作流只保留 Actions 产物。
 
 ```bash
-git tag -a v3.1.0-rc.5 -m 'Internal release 3.1.0-rc.5'
-git push origin v3 v3.1.0-rc.5
+git tag -a v3.1.0-rc.6 -m 'Internal release 3.1.0-rc.6'
+git push origin v3 v3.1.0-rc.6
 ```
 
 随后由 `rocos-sia/rocos-releases` 每小时收录，也可手动同步。已发布版本不覆盖；API 契约版本与软件包版本相互独立。
