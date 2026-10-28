@@ -93,6 +93,7 @@ test('tool package UI imports ZIP, edits separate transforms and exports origina
   await dialog.getByRole('button',{name:'保存',exact:true}).click();await expect(dialog).toHaveCount(0);
   expect(fixture.tool.mount.position.z).toBeCloseTo(0.05);expect(fixture.tool.mount.orientation.z).toBeCloseTo(Math.SQRT1_2);
   expect(fixture.tool.tcp.position.x).toBeCloseTo(0.1);
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.tcp?.slice(12, 15).map((v: number) => Number(v.toFixed(6))))).toEqual([0, 0.1, 0.05]);
   for(const [button,name] of [['导出原始工具包','gripper.zip'],['导出安装配置','gripper-installation.yaml']] as const){
     const download=page.waitForEvent('download');await page.getByRole('button',{name:button,exact:true}).click();expect((await download).suggestedFilename()).toBe(name);
   }
@@ -189,4 +190,151 @@ test('a new controller session without package support returns to ordinary tool 
   await expect(page.getByRole('tab',{name:'工具包',exact:true})).toHaveCount(0);
   await expect(page.getByRole('tab',{name:'工具管理',exact:true})).toHaveAttribute('aria-selected','true');
   await expect(page.getByRole('cell',{name:'plain',exact:true})).toBeVisible();
+});
+
+async function packagePreviewSnapshot(page: Page) {
+  return page.evaluate(async () => {
+    const path = '/node_modules/.vite/deps/@react-three_fiber.js';
+    const { _roots } = await import(path);
+    const state = _roots.get(document.querySelector('.teach-package-preview canvas'))?.store.getState();
+    if (!state) return null;
+    state.scene.updateMatrixWorld(true);
+    const model = state.scene.getObjectByName('package-preview-model');
+    return {
+      model: model?.matrixWorld.elements,
+      modelName: model?.children[0]?.robotName,
+      mount: state.scene.getObjectByName('package-preview-mount')?.matrixWorld.elements,
+      tcp: state.scene.getObjectByName('package-preview-tcp')?.matrixWorld.elements,
+      camera: state.camera.position.toArray(),
+      far: state.camera.far,
+      maxDistance: state.controls.maxDistance,
+      target: state.controls.target.toArray(),
+    };
+  });
+}
+
+const closeValues = (actual: number[], expected: number[]) => expected.forEach((value, i) => expect(actual[i]).toBeCloseTo(value, 6));
+
+test('selected package preview shows installation and composed TCP after scanning without activation', async ({ page }) => {
+  const fixture = await setup(page);
+  fixture.setActive('');
+  fixture.tool.mount = { ...pose(0.02, 0.03, 0.04), orientation: { x:0, y:0, z:Math.SQRT1_2, w:Math.SQRT1_2 } };
+  fixture.tool.tcp = { ...pose(0.1, 0, 0.14), orientation: { x:Math.SQRT1_2, y:0, z:0, w:Math.SQRT1_2 } };
+  await page.goto('/#/devices?tab=tool');
+  await page.getByRole('tab', { name:'工具包', exact:true }).click();
+  await page.getByRole('button', { name:'扫描工具目录', exact:true }).click();
+  const preview = page.getByRole('region', { name:'工具模型预览', exact:true });
+  await expect(preview).toHaveAttribute('data-model-status', 'ready');
+  const snapshot = (await packagePreviewSnapshot(page))!;
+  expect(snapshot.modelName).toBe('Gripper');
+  closeValues(snapshot.model.slice(12, 15), [0.02, 0.03, 0.04]);
+  closeValues(snapshot.mount.slice(12, 15), [0.02, 0.03, 0.04]);
+  closeValues(snapshot.tcp.slice(12, 15), [0.02, 0.13, 0.18]);
+  closeValues(snapshot.tcp.slice(0, 3), [0, 1, 0]);
+  closeValues(snapshot.tcp.slice(4, 7), [0, 0, 1]);
+  await preview.getByRole('checkbox', { name:'安装坐标系', exact:true }).uncheck();
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.mount)).toBeUndefined();
+  expect((await packagePreviewSnapshot(page))!.tcp).toBeDefined();
+  await preview.getByRole('checkbox', { name:'安装坐标系', exact:true }).check();
+  const canvas = await preview.locator('canvas').boundingBox();
+  await page.mouse.move(canvas!.x + canvas!.width / 2, canvas!.y + canvas!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(canvas!.x + canvas!.width / 2 + 90, canvas!.y + canvas!.height / 2 + 30, { steps:8 });
+  await page.mouse.up();
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => Math.abs(s!.camera[0] - snapshot.camera[0]))).toBeGreaterThan(0.01);
+  await preview.getByRole('button', { name:'重置视角', exact:true }).click();
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s!.camera.map((v: number) => Number(v.toFixed(4))))).toEqual(snapshot.camera.map((v: number) => Number(v.toFixed(4))));
+  await page.mouse.move(canvas!.x + canvas!.width / 2, canvas!.y + canvas!.height / 2);
+  for (let i = 0; i < 40; i++) await page.mouse.wheel(0, 200);
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => Math.hypot(...s!.camera.map((v: number, i: number) => v - s!.target[i])))).toBeCloseTo(snapshot.maxDistance, 4);
+  const zoomed = (await packagePreviewSnapshot(page))!;
+  expect(zoomed.far).toBeGreaterThan(zoomed.maxDistance * 16 / 15);
+  await preview.getByRole('button', { name:'重置视角', exact:true }).click();
+  expect(fixture.assets.filter(path => path === 'gripper.urdf')).toHaveLength(1);
+  expect(fixture.requests.some(r => r.path.endsWith('/reload') && r.method === 'POST')).toBe(true);
+  expect(fixture.requests.filter(r => r.method === 'POST' && /active_tool_frame|\/(move|jog)/.test(r.path))).toEqual([]);
+  await page.screenshot({ path:'test-results/tool-package-preview.png' });
+});
+
+test('package preview uses identity for missing transforms and supports coordinate-only tools', async ({ page }) => {
+  const fixture = await setup(page, true);
+  await page.route('**/api/robot/tool_frame?**', async route => {
+    if (new URL(route.request().url()).searchParams.get('name') !== 'gripper') return route.fallback();
+    await route.fulfill({ json:{ success:true, code:0, data:{ name:'gripper', frame:pose(), package:{ ...fixture.tool, mount:null, tcp:undefined, urdf:'' } } } });
+  });
+  await page.goto('/#/devices?tab=tool');
+  await page.getByRole('tab', { name:'工具包', exact:true }).click();
+  const preview = page.getByRole('region', { name:'工具模型预览', exact:true });
+  await expect(preview).toHaveAttribute('data-model-status', 'axes-only');
+  await expect(preview).toContainText('未提供的变换按单位阵预览');
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.mount)).toEqual([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+  expect((await packagePreviewSnapshot(page))!.tcp).toEqual((await packagePreviewSnapshot(page))!.mount);
+  expect(fixture.assets).toEqual([]);
+  await expect(page.getByRole('button', { name:'编辑安装与 TCP', exact:true })).toBeDisabled();
+  await page.screenshot({ path:'test-results/tool-package-preview-identity.png' });
+});
+
+test('package preview keeps axes when a model fails and retries read-only', async ({ page }) => {
+  const fixture = await setup(page, true);
+  let failing = true;
+  await page.route('**/api/robot/tool_package/asset?**', route => failing
+    ? route.fulfill({ status:404, contentType:'text/plain', body:'Missing model' }) : route.fallback());
+  await page.goto('/#/devices?tab=tool');
+  await page.getByRole('tab', { name:'工具包', exact:true }).click();
+  const preview = page.getByRole('region', { name:'工具模型预览', exact:true });
+  await expect(preview).toHaveAttribute('data-model-status', 'error');
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => !!s?.mount && !!s?.tcp)).toBe(true);
+  failing = false;
+  await preview.getByRole('button', { name:'重新加载', exact:true }).click();
+  await expect(preview).toHaveAttribute('data-model-status', 'ready');
+  expect(fixture.requests.filter(r => r.method === 'POST' && r.path.startsWith('/api/robot/'))).toEqual([]);
+});
+
+test('package preview discards a delayed previous selection and clears on disconnect', async ({ page }) => {
+  const fixture = await setup(page, true);
+  const second = { ...fixture.tool, name:'second', digest:'b'.repeat(64), mount:pose(0.03,0,0) };
+  await page.route('**/api/robot/tool_frames', route => route.fulfill({ json:{ success:true,code:0,data:{ names:['gripper','second'],active:'',file_path:'/config/frames.yaml',package_support:true,robot_id:'robot_A' } } }));
+  await page.route('**/api/robot/tool_frame?**', route => new URL(route.request().url()).searchParams.get('name') === 'second'
+    ? route.fulfill({ json:{success:true,code:0,data:{name:'second',frame:pose(),package:second}} }) : route.fallback());
+  let release: () => void = () => {}, waiting = false;
+  const delay = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/robot/tool_package/asset?**', async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('path') !== 'gripper.urdf') return route.fallback();
+    if (url.searchParams.get('name') === 'gripper') { waiting = true; await delay; }
+    await route.fulfill({ contentType:'application/xml',body:toolXml.replace('name="Gripper"', `name="${url.searchParams.get('name')}"`) });
+  });
+  await page.goto('/#/devices?tab=tool');
+  await page.getByRole('tab', { name:'工具包', exact:true }).click();
+  await expect.poll(() => waiting).toBe(true);
+  await page.locator('.teach-package-details .ant-select-selector').click();
+  await page.getByTitle('second · 1.0.0', { exact:true }).click();
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.modelName)).toBe('second');
+  release();
+  await expect(page.getByRole('img', { name:'工具模型预览: second', exact:true })).toBeVisible();
+  expect((await packagePreviewSnapshot(page))!.modelName).toBe('second');
+  await page.evaluate(async () => { const path='/src/stores/connectionStore.ts'; const {useConnectionStore}=await import(path); useConnectionStore.getState().setConnected(false); });
+  await expect.poll(() => packagePreviewSnapshot(page)).toBeNull();
+});
+
+test('package preview fits a narrow workspace and preserves framing across languages', async ({ page }) => {
+  const fixture = await setup(page, true);
+  fixture.tool.mount = { ...pose(0.3, -0.2, 0.1), orientation:{ x:0, y:0, z:Math.SQRT1_2, w:Math.SQRT1_2 } };
+  await page.goto('/#/devices?tab=tool');
+  await page.getByRole('tab', { name:'工具包', exact:true }).click();
+  const preview = page.locator('.teach-package-preview');
+  await expect(preview).toHaveAttribute('data-model-status', 'ready');
+  const details = await page.locator('.teach-package-details').boundingBox(), desktop = await preview.boundingBox();
+  expect(desktop!.x).toBeGreaterThan(details!.x + details!.width);
+  await page.setViewportSize({ width:900, height:1000 });
+  await expect.poll(async () => { const p=await preview.boundingBox(),d=await page.locator('.teach-package-details').boundingBox(); return p!.y > d!.y + d!.height; }).toBe(true);
+  await preview.scrollIntoViewIfNeeded();
+  await expect(preview.locator('canvas')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const initialCamera = (await packagePreviewSnapshot(page))!.camera;
+  await page.evaluate(async () => { const path='/src/stores/uiStore.ts'; const {useUIStore}=await import(path); useUIStore.setState({language:'en'}); });
+  await expect(preview.getByRole('checkbox', { name:'Installation frame', exact:true })).toBeVisible();
+  await expect(preview.getByRole('checkbox', { name:'Tool frame (TCP)', exact:true })).toBeVisible();
+  await expect.poll(() => packagePreviewSnapshot(page).then(s => s?.camera.map((v: number) => Number(v.toFixed(4))))).toEqual(initialCamera.map((v: number) => Number(v.toFixed(4))));
+  await page.screenshot({ path:'test-results/tool-package-preview-narrow.png' });
 });

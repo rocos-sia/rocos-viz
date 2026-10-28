@@ -17,6 +17,7 @@ import { SceneErrorBoundary } from '@/scene/SceneErrorBoundary';
 import { ToolFrameAxes } from '@/scene/ToolFrameAxes';
 import { ToolPackageModel } from '@/scene/ToolPackageModel';
 import { SceneSlot } from './SceneSlot';
+import { useRobotInfo } from '@/hooks/useRobotInfo';
 
 function Turntable({ robot, rotating, connected }: { robot: URDFRobot; rotating: boolean; connected: boolean }) {
   const group = useRef<Group>(null);
@@ -44,6 +45,7 @@ function Turntable({ robot, rotating, connected }: { robot: URDFRobot; rotating:
 
 function Preview({ xml, connected, meshBase, active }: { xml: string | null; connected: boolean; meshBase: string; active: boolean }) {
   const t = useT();
+  const { info } = useRobotInfo();
   const reduced = useReducedMotion();
   const units = useUnits();
   const [paused, setPaused] = useState(false);
@@ -105,7 +107,7 @@ function Preview({ xml, connected, meshBase, active }: { xml: string | null; con
       <dl>
         <dt>{t('teach.dof')}</dt><dd>{summary?.dof ?? '—'}</dd>
         <dt>{t('teach.model.mass')}</dt><dd>{summary?.totalMass != null ? `${(summary.totalMass * units.mass.factor).toFixed(3)} ${units.mass.label}` : missing}</dd>
-        <dt>{t('teach.model.serial')}</dt><dd>{missing}</dd>
+        <dt>{t('teach.model.serial')}</dt><dd>{connected ? info?.robot?.serial_number ?? missing : missing}</dd>
         <dt>{t('teach.model.links')}</dt><dd>{summary?.linkCount ?? '—'}</dd>
         <dt>{t('teach.source')}</dt><dd>{connected ? 'URDF' : t('teach.demo')}</dd>
       </dl>

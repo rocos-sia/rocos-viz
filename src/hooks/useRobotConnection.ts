@@ -5,8 +5,10 @@ import { RobotApiClient } from '@/core/RobotApiClient';
 import { RobotWebSocket } from '@/core/RobotWebSocket';
 import { POLLING_INTERVAL_MS, MAX_STATE_FAILURES } from '@/core/constants';
 import type { RobotState } from '@/core/types';
+import { useRobotInfoConnection } from './useRobotInfo';
 
 export function useRobotConnection() {
+  useRobotInfoConnection();
   const generation = useRef(0);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);

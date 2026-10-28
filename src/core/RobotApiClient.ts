@@ -203,7 +203,12 @@ export class RobotApiClient {
   // ─── Robot State ──────────────────────────────────────────────
 
   async connect(): Promise<RobotInfo> {
-    return this.request('GET', '/api/robot/info');
+    return this.getRobotInfo();
+  }
+
+  /** 只读静态信息；连接后获取一次，需要时手动刷新。 */
+  async getRobotInfo(signal?: AbortSignal): Promise<RobotInfo> {
+    return this.request('GET', '/api/robot/info', undefined, undefined, signal);
   }
 
   /** GET /api/robot/state — 获取机器人完整状态 */

@@ -1,6 +1,14 @@
 import { Euler, Quaternion } from 'three';
 import type { Pose } from './types';
 
+/** 工具包预览：缺失的变换或分量按单位阵显示，不写回控制器。 */
+export function toolPackagePose(pose?: Pose | null): Pose {
+  return {
+    position: { x: pose?.position?.x ?? 0, y: pose?.position?.y ?? 0, z: pose?.position?.z ?? 0 },
+    orientation: { x: pose?.orientation?.x ?? 0, y: pose?.orientation?.y ?? 0, z: pose?.orientation?.z ?? 0, w: pose?.orientation?.w ?? 1 },
+  };
+}
+
 /** 法兰→工具位姿，平移单位 m，RPY 单位 rad，ZYX 对齐 KDL::Rotation::RPY。 */
 export function toolPoseValues(pose: Pose): number[] {
   const { x, y, z, w } = pose.orientation;

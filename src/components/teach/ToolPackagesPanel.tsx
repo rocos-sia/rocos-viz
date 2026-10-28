@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Input, InputNumber, Modal, Select } from 'antd';
 import type { NamedToolFrame, ToolPackage } from '@/core/types';
 import { RobotApiClient } from '@/core/RobotApiClient';
-import { toolPoseFromValues, toolPoseValues } from '@/core/ToolPose';
+import { toolPackagePose, toolPoseFromValues, toolPoseValues } from '@/core/ToolPose';
 import { useUnits } from '@/stores/unitStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useT } from '@/i18n/useT';
 import { TeachCard } from './TeachCard';
+import { ToolPackagePreview } from './ToolPackagePreview';
 
 type Run = (label: string, work: (signal: AbortSignal) => Promise<void>, readOnly?: boolean) => Promise<void>;
 const axes = ['X', 'Y', 'Z', 'RX', 'RY', 'RZ'];
@@ -50,20 +51,20 @@ export function ToolPackagesPanel({ tools, allowed, busy, client, run, reload, r
       <Button disabled={!allowed || busy} onClick={() => void run('reload-packages', async signal => { await client.reloadToolPackages(signal); await reload(signal); })}>{t('tools.scanPackages')}</Button>
       <Button disabled={!allowed || busy} onClick={() => installation.current?.click()}>{t('tools.importInstallation')}</Button>
     </div>
-    {!tool ? <p className="teach-empty">{t('tools.noPackages')}</p> : <>
+    {!tool ? <p className="teach-empty">{t('tools.noPackages')}</p> : <div className="teach-package-layout"><div className="teach-package-details">
       <Select className="teach-package-select" aria-label={t('tools.packageSelection')} value={tool.name} disabled={busy}
         options={packages.map(tool => ({ value: tool.name, label: `${tool.name} · ${tool.package_version}` }))} onChange={onSelect} />
-      <p>{t('tools.mount')}: {toolPoseValues(tool.mount).slice(0, 3).map(v => (v * units.length.factor).toFixed(3)).join(' / ')} {units.length.label}</p>
-      <p>{t('tools.localTcp')}: {toolPoseValues(tool.tcp).slice(0, 3).map(v => (v * units.length.factor).toFixed(3)).join(' / ')} {units.length.label}</p>
+      <p>{t('tools.mount')}: {toolPoseValues(toolPackagePose(tool.mount)).slice(0, 3).map(v => (v * units.length.factor).toFixed(3)).join(' / ')} {units.length.label}</p>
+      <p>{t('tools.localTcp')}: {toolPoseValues(toolPackagePose(tool.tcp)).slice(0, 3).map(v => (v * units.length.factor).toFixed(3)).join(' / ')} {units.length.label}</p>
       <div className="teach-button-row">
-        <Button disabled={!allowed || busy} onClick={() => setEdit({ tool, mount: toolPoseValues(tool.mount), tcp: toolPoseValues(tool.tcp) })}>{t('tools.editInstallation')}</Button>
+        <Button disabled={!allowed || busy} onClick={() => setEdit({ tool, mount: toolPoseValues(toolPackagePose(tool.mount)), tcp: toolPoseValues(toolPackagePose(tool.tcp)) })}>{t('tools.editInstallation')}</Button>
         <Button disabled={!allowed || busy} onClick={() => { expected.current = tool.digest; archive.current?.click(); }}>{t('tools.updatePackage')}</Button>
         <Button disabled={busy} onClick={() => void run('export-package', async signal => download(await client.exportToolFile(tool.name, false, undefined, signal), `${tool.name}.zip`), true)}>{t('tools.exportPackage')}</Button>
         <Button disabled={busy} onClick={() => setExportVersion({ tool, version: '' })}>{t('tools.exportCalibrated')}</Button>
         <Button disabled={busy} onClick={() => void run('export-installation', async signal => download(await client.exportToolFile(tool.name, true, undefined, signal), `${tool.name}-installation.yaml`), true)}>{t('tools.exportInstallation')}</Button>
       </div>
       {tool.calibration_yaml && <details className="teach-package-calibration"><summary>{t('tools.calibrationRecord')}</summary><pre>{tool.calibration_yaml}</pre></details>}
-    </>}
+    </div><ToolPackagePreview tool={tool} client={client} /></div>}
     <Modal title={t('tools.editInstallation')} open={!!edit} destroyOnClose onCancel={() => { if (!busy) setEdit(null); }}
       okText={t('teach.save')} confirmLoading={busy} okButtonProps={{ 'aria-label': t('teach.save'), disabled: !allowed || busy || !edit || ![...edit.mount, ...edit.tcp].every(Number.isFinite) }}
       onOk={() => void run('save-installation', async signal => {
@@ -74,7 +75,7 @@ export function ToolPackagesPanel({ tools, allowed, busy, client, run, reload, r
       <Alert type="info" message={t('tools.installationHint')} />
       {form('mount', t('tools.mount'))}{form('tcp', t('tools.localTcp'))}
       <Button disabled={busy || !edit} onClick={() => setEdit(draft => draft && ({ ...draft,
-        mount: toolPoseValues(draft.tool.default_mount ?? draft.tool.mount), tcp: toolPoseValues(draft.tool.default_tcp ?? draft.tool.tcp) }))}>{t('tools.restoreDefaults')}</Button>
+        mount: toolPoseValues(toolPackagePose(draft.tool.default_mount ?? draft.tool.mount)), tcp: toolPoseValues(toolPackagePose(draft.tool.default_tcp ?? draft.tool.tcp)) }))}>{t('tools.restoreDefaults')}</Button>
       {error && <Alert type="error" showIcon message={error} />}
     </Modal>
     <Modal title={t('tools.exportCalibrated')} open={!!exportVersion} onCancel={() => { if (!busy) setExportVersion(null); }}

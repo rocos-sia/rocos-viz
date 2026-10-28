@@ -83,6 +83,59 @@ export interface JointInfo {
 
 export interface RobotInfo {
   joint_infos: JointInfo[];
+  /** 扩展字段缺省表示旧版 App；未知值用 null，不把占位值当设备实测值。 */
+  info_schema_version?: number;
+  controller?: {
+    app_version: string;
+    build_commit: string | null;
+    api_version: string;
+    shm_abi_version: number;
+    capabilities: string[];
+  };
+  robot?: {
+    source: InfoSource;
+    name: string | null;
+    package_version: string | null;
+    device_id: string | null;
+    serial_number: string | null;
+    dof: number | null;
+    base_link: string | null;
+    tip_link: string | null;
+    model_digest: string | null;
+    link_count: number | null;
+    mass_kg: number | null;
+    mass_complete: boolean;
+  };
+  master?: {
+    source: InfoSource;
+    backend: 'unknown' | 'ecm' | 'igh' | 'mujoco';
+    version: string | null;
+    sdk_version: string | null;
+    master_id: number | null;
+    cycle_time_us: number | null;
+    configured_slave_count: number | null;
+  };
+  slaves?: SlaveInfo[];
+  slaves_complete?: boolean;
+}
+
+export type InfoSource = 'placeholder' | 'configuration' | 'runtime';
+
+export interface SlaveInfo {
+  /** 当前为配置驱动器的 id，不代表物理总线位置。 */
+  id: number;
+  name: string | null;
+  joint_name: string | null;
+  role: 'drive' | 'ft_sensor' | 'io' | 'unknown';
+  source: InfoSource;
+  vendor_id: number | null;
+  product_code: number | null;
+  revision_number: number | null;
+  serial_number: string | null;
+  firmware_version: string | null;
+  identity_source: 'unknown' | 'configuration' | 'device';
+  input_pdo_count: number | null;
+  output_pdo_count: number | null;
 }
 
 export interface LinkConfig {

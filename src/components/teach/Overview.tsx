@@ -8,6 +8,7 @@ import { demoJoints, demoPosition, demoPrograms, useTeachStore } from '@/stores/
 import { useT } from '@/i18n/useT';
 import { DemoBadge, TeachCard } from './TeachCard';
 import { RobotOverview } from './RobotOverview';
+import { ControllerInfoDialog } from './ControllerInfoPanel';
 import { FRAME } from '@/core/constants';
 import { useJointRanges } from '@/hooks/useJointRanges';
 import { jointBarRange } from '@/core/JointRange';
@@ -95,7 +96,7 @@ export function Overview({ urdfContent }: { urdfContent: string | null }) {
   const { connected } = useDisplayRobot();
   const step = useTeachStore((s) => s.demoStep);
   return <div className="teach-dashboard" data-motion>
-    <TeachCard title={t('teach.robotStatus')} extra={!connected && <DemoBadge />} className="dashboard-primary">
+    <TeachCard title={t('teach.robotStatus')} extra={<>{!connected && <DemoBadge />}<ControllerInfoDialog /></>} className="dashboard-primary">
       <RobotOverview />
       <Link className="teach-card-link" to="/teaching">{t('teach.openTeaching')} <ArrowRightOutlined /></Link>
     </TeachCard>

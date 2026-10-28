@@ -1,0 +1,44 @@
+name: Build and release DEB
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deb-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deb:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test test/*.test.mjs && npm run build
+      - name: Browser regression tests (mock controller)
+        run: |
+          npx playwright install --with-deps chrome
+          npx playwright test test/browser/overview.spec.ts test/browser/robot-info.spec.ts test/browser/tool-packages.spec.ts --workers=1
+      - name: Package static site
+        run: |
+          python3 packaging/build_deb.py
+          dpkg-deb --info build/packages/*.deb
+          dpkg-deb --extract build/packages/*.deb build/package-check
+          test -f build/package-check/opt/rocos/web/index.html
+          cd build/packages && sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocos-viz-deb
+          path: build/packages/
+      - name: Publish source repository release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 packaging/publish_release.py build/packages
