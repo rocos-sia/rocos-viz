@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { AxesIndicator } from '@/scene/AxesIndicator';
 import { RobotViewer } from '@/scene/RobotViewer';
 import { RobotModel } from '@/scene/RobotModel';
+import { MotionPreviewGhost } from '@/scene/MotionPreviewGhost';
+import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
 import { ToolFrameAxes } from '@/scene/ToolFrameAxes';
 import { ToolPackageModel } from '@/scene/ToolPackageModel';
 import { SceneErrorBoundary } from '@/scene/SceneErrorBoundary';
@@ -87,6 +89,8 @@ function DemoRobot() {
 }
 
 export function Robot3DCardScene({ urdfContent, active }: { urdfContent: string | null; active: boolean }) {
+  const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
+  useEffect(() => { useMotionPreviewStore.getState().reset(); }, [urdfContent]);
   const t = useT();
   const connected = useConnectionStore((s) => s.isConnected);
   const host = useConnectionStore((s) => s.host);
@@ -136,12 +140,14 @@ export function Robot3DCardScene({ urdfContent, active }: { urdfContent: string 
         <RobotViewer active={active}>
           <AxesIndicator />
           {connected ? <RobotModel urdfContent={urdfContent} meshBasePath={new RobotApiClient(host, port).getMeshBaseUrl()} /> : <DemoRobot />}
+          {connected && urdfContent && <MotionPreviewGhost xml={urdfContent} meshBase={new RobotApiClient(host, port).getMeshBaseUrl()} />}
           {connected && urdfContent && <ToolFrameAxes />}
           {connected && urdfContent && <ToolPackageModel />}
           {connected && active && <TrajectoryLineWrapper />}
         </RobotViewer>
       </SceneErrorBoundary>
       {connected && !urdfContent && <div className="teach-scene-note">{t('teach.loadingModel')}</div>}
+      {simulation && <div className="motion-preview-legend"><span>{t('preview.actual')}</span><span>{t('preview.ghost')}</span></div>}
       {active && <ResetButton />}
       <SceneToggles />
     </div>

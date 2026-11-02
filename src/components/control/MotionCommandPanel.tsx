@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { Button, InputNumber, Segmented, message } from 'antd';
+import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
+import { validateMotionPreview } from '@/core/MotionPreview';
 import { CopyOutlined } from '@ant-design/icons';
 import { useUnitStore } from '@/stores/unitStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
@@ -23,7 +25,18 @@ export function MotionCommandPanel() {
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const token = useConnectionStore((s) => s.controlToken);
   const currentFrame = useControlStore((s) => s.currentFrame);
-  const state = useRobotStateStore((s) => s.robotState);
+  const liveState = useRobotStateStore((s) => s.robotState);
+  const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
+  const virtualState = useMotionPreviewStore(s => s.virtualState);
+  const revision = useMotionPreviewStore(s => s.revision);
+  const state = simulation ? virtualState : liveState;
+  const abort = useRef<AbortController | null>(null);
+  useEffect(() => {
+    abort.current?.abort();
+    sending.current = false;
+    setPending(null);
+    return () => { abort.current?.abort(); };
+  }, [revision]);
   const jointCount = state?.joint_states.length || 7;
   const [space, setSpace] = useState('joint');
   const [cartesian, setCartesian] = useState([0, 0, 0, 0, 0, 0]);
@@ -31,7 +44,7 @@ export function MotionCommandPanel() {
   const [pending, setPending] = useState<Command | null>(null);
   const sending = useRef(false);
   const reference = preciseReference(currentFrame, state);
-  const allowed = connected && enabled && !!token && !compact;
+  const allowed = connected && (simulation || (enabled && !!token && !compact));
   const available = space === 'joint' ? !!state?.joint_states.length : !!reference;
   const currentValues = space === 'joint' ? preciseCurrentJoints(state) : preciseCurrentPose(currentFrame, state);
 
@@ -39,7 +52,7 @@ export function MotionCommandPanel() {
 
   const fillCurrent = () => {
     if (!useConnectionStore.getState().isConnected || sending.current) return;
-    const robot = useRobotStateStore.getState().robotState;
+    const robot = simulation ? useMotionPreviewStore.getState().virtualState : useRobotStateStore.getState().robotState;
     const values = space === 'joint' ? preciseCurrentJoints(robot)
       : preciseCurrentPose(useControlStore.getState().currentFrame, robot);
     if (values) (space === 'joint' ? setJoints : setCartesian)(values);
@@ -47,8 +60,10 @@ export function MotionCommandPanel() {
 
   const send = async (command: Command) => {
     const connection = useConnectionStore.getState();
-    if (sending.current || !connection.isConnected || !connection.isRobotEnabled || !connection.controlToken || compact) return;
-    const robot = useRobotStateStore.getState().robotState;
+    const previewState = useMotionPreviewStore.getState();
+    const isPreview = previewState.mode === 'simulation';
+    if (sending.current || !connection.isConnected || (!isPreview && (!connection.isRobotEnabled || !connection.controlToken || compact))) return;
+    const robot = isPreview ? previewState.virtualState : useRobotStateStore.getState().robotState;
     const { currentFrame: frame, speedFactor } = useControlStore.getState();
     const jointTarget = command === 'MoveJ' || command === 'MoveL_FK';
     const values = jointTarget ? joints : cartesian;
@@ -56,10 +71,28 @@ export function MotionCommandPanel() {
     if (!values.every(Number.isFinite) || (jointTarget ? !robot?.joint_states.length || joints.length !== robot.joint_states.length : !targetReference)) return;
     sending.current = true;
     setPending(command);
+    const request = new AbortController();
+    abort.current = request;
+    if (isPreview) useMotionPreviewStore.setState({ pending: true, error: null, playing: false });
+    const timeout = isPreview ? window.setTimeout(() => {
+      if (request.signal.aborted) return;
+      request.abort();
+      useMotionPreviewStore.setState({ pending: false, error: t('preview.timeout') });
+    }, 15_000) : undefined;
     try {
       const client = new RobotApiClient(connection.host, connection.port);
       const { speed, acceleration } = command === 'MoveJ' || command === 'MoveJ_IK'
         ? jointMotionParams(speedFactor) : cartesianMotionParams(speedFactor);
+      if (isPreview) {
+        const names = robot!.joint_states.map(j => j.name);
+        const result = validateMotionPreview(await client.previewMotion({
+          motion_type: command, start_joints: robot!.joint_states.map(j => j.position),
+          ...(jointTarget ? { joints } : { pose: preciseTarget(cartesian, targetReference!) }),
+          velocity: speed, acceleration, jerk: 10, max_points: 300,
+        }, request.signal), names, robot!.joint_states.map(j => j.position), command);
+        if (!request.signal.aborted) useMotionPreviewStore.getState().accept(result, previewState.revision);
+        return;
+      }
       if (command === 'MoveJ') await client.moveJ(joints, speed, acceleration);
       else if (command === 'MoveL_FK') await client.moveL_FK(joints, speed, acceleration);
       else {
@@ -69,10 +102,17 @@ export function MotionCommandPanel() {
       }
       message.success(t('common.sent', { cmd: command }));
     } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : String(error));
+      if (request.signal.aborted) return;
+      const detail = error instanceof Error ? error.message : String(error);
+      if (isPreview) useMotionPreviewStore.setState({ pending: false, error: detail });
+      else message.error(detail);
     } finally {
-      sending.current = false;
-      setPending(null);
+      window.clearTimeout(timeout);
+      if (abort.current === request) {
+        sending.current = false;
+        setPending(null);
+        if (isPreview && previewState.revision === useMotionPreviewStore.getState().revision) useMotionPreviewStore.setState({ pending: false });
+      }
     }
   };
 
@@ -90,12 +130,12 @@ export function MotionCommandPanel() {
       ]} />
     {space === 'cartesian' && <div className="precise-reference">
       {t('precise.reference', { frame: frameLabel })}
-      {currentFrame !== FRAME.BASE && <span>{t('precise.referenceAtExecution')}</span>}
+      {currentFrame !== FRAME.BASE && <span>{t(simulation ? 'preview.reference' : 'precise.referenceAtExecution')}</span>}
       {!reference && <span role="status">{t('precise.frameUnavailable')}</span>}
     </div>}
     <Button className="precise-fill-current" block icon={<CopyOutlined aria-hidden="true" />}
       disabled={!connected || !currentValues || !!pending} onClick={fillCurrent}>
-      {t(space === 'joint' ? 'precise.fillCurrentJoints' : 'precise.fillCurrentPose')}
+      {t(simulation ? 'preview.fill' : space === 'joint' ? 'precise.fillCurrentJoints' : 'precise.fillCurrentPose')}
     </Button>
     <fieldset className="teach-control-fieldset precise-fields" disabled={!allowed || !!pending} aria-label={t(space === 'joint' ? 'precise.jointPosition' : 'precise.cartesianPose')}>
       <div className="precise-grid">
@@ -122,7 +162,7 @@ export function MotionCommandPanel() {
     <div className="precise-actions">
       {commands.map((command, index) => <Button key={command} type={index === 0 ? 'primary' : 'default'}
         disabled={!allowed || !available || !!pending} loading={pending === command} onClick={() => void send(command)}>
-        <span className="precise-action-label"><span>{t(index === 0 ? 'precise.jointMotion' : 'precise.cartesianMotion')}</span><span>({command})</span></span>
+        <span className="precise-action-label"><span>{t(simulation ? 'preview.generate' : index === 0 ? 'precise.jointMotion' : 'precise.cartesianMotion')}</span><span>({command})</span></span>
       </Button>)}
     </div>
   </div>;

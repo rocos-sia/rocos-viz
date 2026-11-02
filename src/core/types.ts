@@ -263,3 +263,25 @@ export interface ToolCalibrationSession {
   captured: number;
   result: CalibrationResult | null;
 }
+
+// Read-only APP trajectory preview; joint units are radians/metres and time is seconds.
+export type PreviewMotionType = 'MoveJ' | 'MoveL' | 'MoveJ_IK' | 'MoveL_FK';
+export interface MotionPreviewRequest {
+  motion_type: PreviewMotionType;
+  start_joints: number[];
+  joints?: number[];
+  pose?: Pose;
+  velocity: number;
+  acceleration: number;
+  jerk: number;
+  max_points?: number;
+}
+export interface MotionPreview {
+  motion_type: PreviewMotionType;
+  joint_names: string[];
+  duration: number;
+  points: { time_from_start: number; positions: number[]; flange: Pose }[];
+  checks: string[];
+  collision_checked: boolean;
+  execution_checked: boolean;
+}

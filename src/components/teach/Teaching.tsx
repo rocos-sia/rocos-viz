@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
+import { MotionModeSelector, MotionPreviewControls } from '@/components/control/MotionPreviewControls';
 import { Link } from 'react-router';
 import { Button, Drawer, Tabs, Alert, Segmented, Tooltip } from 'antd';
 import { MinusOutlined, PlusOutlined, UndoOutlined, RedoOutlined, InfoCircleOutlined } from '@ant-design/icons';
@@ -38,6 +40,8 @@ function PreviewJog({ kind, joints, onJointChange, onCartesianChange }: { kind: 
 
 export function Teaching({ urdfContent }: { urdfContent: string | null }) {
   const t = useT();
+  const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
+  useEffect(() => () => useMotionPreviewStore.getState().setMode('real'), []);
   const connected = useConnectionStore((s) => s.isConnected);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const token = useConnectionStore((s) => s.controlToken);
@@ -52,23 +56,25 @@ export function Teaching({ urdfContent }: { urdfContent: string | null }) {
     <section className="teach-state-section"><h3 className="teach-state-heading">{t('teach.jointStatus')}</h3><JointReadout urdfContent={urdfContent} values={connected ? undefined : previewJoints} /></section>
     <section className="teach-state-section"><h3 className="teach-state-heading">{t('teach.cartesianState')}</h3><PoseReadout values={connected ? undefined : previewPose} /></section>
   </div>;
-  return <div className="teach-teaching">
+  return <div className={`teach-teaching${simulation ? ' is-simulation' : ''}`}>
     <div className="teach-scene-column">
       <div className="teach-teaching-grid"><Robot3DCard /></div>
-      <ContextPanel />
+      {simulation ? <MotionPreviewControls /> : <ContextPanel />}
     </div>
     <aside className="teach-state-column">
       <TeachCard title={t('teach.realtime')} extra={!connected && <DemoBadge />}>{stateReadout}</TeachCard>
     </aside>
     <div className="teach-motion-column">
       <TeachCard title={t('teach.motionControl')} extra={<><Link to="/devices?tab=tool"><Button>{t('tools.manage')}</Button></Link>{!connected && <DemoBadge />}<Button className="teach-pad-details" onClick={() => setDetails(true)}>{t('teach.details')}</Button></>} className="teach-jog-card">
-        {connected && (!enabled || !token) && <Alert type="warning" showIcon message={t('teach.jogReason')} />}
-        <div className="teach-control-mode"><WorkModeSelector /><div className="teach-jog-reference"><FrameSelector /></div></div>
-        <Tabs activeKey={active} onChange={setActive} tabBarExtraContent={active === 'jog' ? <Tooltip title={t('teach.hold')}><span className="teach-jog-hint" tabIndex={0} aria-label={t('teach.hold')}><span className="teach-jog-hint-text">{t('teach.hold')}</span><InfoCircleOutlined className="teach-jog-hint-icon" /></span></Tooltip> : undefined} items={[
+        <MotionModeSelector />
+
+        {!simulation && connected && (!enabled || !token) && <Alert type="warning" showIcon message={t('teach.jogReason')} />}
+        <div className="teach-control-mode">{simulation ? <span className="motion-preview-workmode">{t('preview.positionMode')}</span> : <WorkModeSelector />}<div className="teach-jog-reference"><FrameSelector /></div></div>
+        {!simulation && <Tabs activeKey={active} onChange={setActive} tabBarExtraContent={active === 'jog' ? <Tooltip title={t('teach.hold')}><span className="teach-jog-hint" tabIndex={0} aria-label={t('teach.hold')}><span className="teach-jog-hint-text">{t('teach.hold')}</span><InfoCircleOutlined className="teach-jog-hint-icon" /></span></Tooltip> : undefined} items={[
           { key: 'jog', label: t('teach.jog') },
           { key: 'precise', label: t('teach.precise') },
-        ]} />
-        {active === 'precise' ? <MotionCommandPanel />
+        ]} />}
+        {simulation || active === 'precise' ? <MotionCommandPanel />
           : <>
             <Segmented className="teach-jog-space" aria-label={t('teach.jogSpace')} block value={jogSpace}
               onChange={(value) => setJogSpace(String(value))} options={[

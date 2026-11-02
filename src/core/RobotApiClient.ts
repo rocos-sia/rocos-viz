@@ -4,6 +4,8 @@ import type {
   RobotState,
   Pose,
   MotionResponse,
+  MotionPreviewRequest,
+  MotionPreview,
   TaskStatus,
   EnabledResponse,
   ScriptListData,
@@ -166,7 +168,7 @@ export class RobotApiClient {
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
-    if (method !== 'GET') {
+    if (method !== 'GET' && !(method === 'POST' && path === '/api/robot/motion/preview')) {
       const token = RobotApiClient.getStoredToken();
       if (!token) throw new Error('No control right; acquire control before operating (code: 3006)');
       headers['X-Rocos-Control-Token'] = token;
@@ -258,6 +260,11 @@ export class RobotApiClient {
   }
 
   // ─── Motion Control ───────────────────────────────────────────
+
+  /** POST /api/robot/motion/preview — 仅计算预览轨迹 */
+  async previewMotion(body: MotionPreviewRequest, signal?: AbortSignal): Promise<MotionPreview> {
+    return this.request('POST', '/api/robot/motion/preview', body, undefined, signal);
+  }
 
   /** POST /api/robot/movej — 关节空间运动 */
   async moveJ(

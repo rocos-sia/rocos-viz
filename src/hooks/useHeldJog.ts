@@ -8,6 +8,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useControlStore } from '@/stores/controlStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useT } from '@/i18n/useT';
+import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
 
 export function useHeldJog(feed: (client: RobotApiClient, sign: number) => Promise<unknown>) {
   const t = useT();
@@ -22,7 +23,8 @@ export function useHeldJog(feed: (client: RobotApiClient, sign: number) => Promi
   const [small, setSmall] = useState(() => matchMedia('(max-width: 599px)').matches);
   const cancel = useRef<(() => void) | null>(null);
   const stop = useCallback(() => { cancel.current?.(); cancel.current = null; }, []);
-  const allowed = connected && enabled && !!token && !small;
+  const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
+  const allowed = !simulation && connected && enabled && !!token && !small;
   useEffect(() => {
     const query = matchMedia('(max-width: 599px)');
     const resize = () => setSmall(query.matches);
@@ -45,7 +47,7 @@ export function useHeldJog(feed: (client: RobotApiClient, sign: number) => Promi
   }, [stop]);
   useEffect(() => stop, [allowed, token, host, port, frame, speed, mode, stop]);
   const start = (sign: number) => {
-    if (!allowed || cancel.current) return;
+    if (!allowed || useMotionPreviewStore.getState().mode !== 'real' || cancel.current) return;
     const client = new RobotApiClient(host, port);
     cancel.current = startHeldJog({
       feed: () => feed(client, sign),

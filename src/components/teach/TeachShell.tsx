@@ -26,6 +26,7 @@ import { PersistentRobotScenes } from './PersistentRobotScenes';
 import { useAutomaticUpdateCheck, useSoftwareUpdates } from '@/hooks/useSoftwareUpdates';
 import { SoftwareUpdateNotifier } from './SoftwareUpdates';
 import { version } from '../../../package.json';
+import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
 
 const Programming = lazy(() => import('./Programming').then((m) => ({ default: m.Programming })));
 const Diagnostics = lazy(() => import('./Diagnostics').then((m) => ({ default: m.Diagnostics })));
@@ -69,6 +70,7 @@ function StatusStrip() {
 
 function ControlBar() {
   const t = useT();
+  const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
   const connected = useConnectionStore((s) => s.isConnected);
   const token = useConnectionStore((s) => s.controlToken);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
@@ -83,7 +85,7 @@ function ControlBar() {
     return () => query.removeEventListener('change', change);
   }, []);
   const command = async (kind: 'resume' | 'pause' | 'stop') => {
-    if (!connected || !token) return;
+    if (!connected || !token || (kind !== 'stop' && useMotionPreviewStore.getState().mode === 'simulation')) return;
     const { host, port } = useConnectionStore.getState();
     const client = new RobotApiClient(host, port);
     if (kind !== 'stop') setBusy(true);
@@ -95,12 +97,12 @@ function ControlBar() {
     } catch (e) { message.error(String(e)); }
     finally { setBusy(false); }
   };
-  const allowed = connected && !!token && enabled && !small;
+  const allowed = !simulation && connected && !!token && enabled && !small;
   return <footer className="teach-controlbar">
-    <div className="teach-controlbar-state"><i className={connected ? 'connected' : ''} /><span>{connected ? status ?? t('teach.unknown') : t('teach.offline')}</span><small>{t(small ? 'teach.smallReadOnly' : 'teach.jogReason')}</small></div>
+    <div className="teach-controlbar-state"><i className={connected ? 'connected' : ''} /><span>{connected ? status ?? t('teach.unknown') : t('teach.offline')}</span><small>{t(simulation ? 'preview.simulation' : small ? 'teach.smallReadOnly' : 'teach.jogReason')}</small></div>
     <div className="teach-speed"><label>{t('teach.speed')}</label><Slider aria-label={t('teach.speed')} min={1} max={99} value={Math.round(speed * 100)} onChange={(v) => useControlStore.getState().setSpeedFactor(v / 100)} /><strong>{Math.round(speed * 100)}%</strong></div>
     <div className="teach-run-buttons">
-      <EnableButton iconOnly disabled={small} />
+      <EnableButton iconOnly disabled={small || simulation} />
       <Button icon={<CaretRightOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'PAUSED'} onClick={() => void command('resume')}>{t('teach.run')}</Button>
       <Button icon={<PauseOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
       <Button danger icon={<span className="teach-stop-icon" aria-hidden="true" />} disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.stop')}</Button>
