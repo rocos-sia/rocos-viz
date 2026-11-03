@@ -52,9 +52,18 @@ for (const language of ['zh', 'en']) {
       }
       return 0;
     })).toBe(9);
-    await page.getByRole('button', { name: language === 'zh' ? '播放预览' : 'Play preview', exact: true }).click();
     await expect(page.getByRole('button', { name: language === 'zh' ? '暂停预览' : 'Pause preview', exact: true })).toBeVisible();
+    const previewTime = () => page.evaluate(async () => {
+      const path = '/src/stores/motionPreviewStore.ts';
+      return (await import(path)).useMotionPreviewStore.getState().time;
+    });
+    await expect.poll(previewTime, { timeout: 8000, intervals: [50] }).toBeGreaterThan(1.6);
+    await page.screenshot({ path: `test-results/motion-preview-loop-${language}.png`, fullPage: true });
+    await expect.poll(previewTime, { timeout: 2000, intervals: [50] }).toBeLessThan(0.4);
+    await expect.poll(previewTime, { timeout: 2000, intervals: [50] }).toBeGreaterThan(0.6);
+    expect(requests).toHaveLength(1);
     await page.getByRole('button', { name: language === 'zh' ? '暂停预览' : 'Pause preview', exact: true }).click();
+    await expect(page.getByRole('button', { name: language === 'zh' ? '播放预览' : 'Play preview', exact: true })).toBeVisible();
     await generate('MoveL_FK').click();
     await expect.poll(() => requests.length).toBe(2);
     expect(requests[1].body.start_joints[0]).toBeCloseTo(Math.PI / 3);
@@ -73,6 +82,11 @@ for (const language of ['zh', 'en']) {
     expect(await page.locator('.precise-panel').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await page.screenshot({ path: `test-results/motion-preview-mobile-${language}.png`, fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await generate('MoveL').click();
+    await expect(page.getByRole('button', { name: language === 'zh' ? '播放预览' : 'Play preview', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: language === 'zh' ? '播放预览' : 'Play preview', exact: true }).click();
+    await expect(page.getByRole('button', { name: language === 'zh' ? '暂停预览' : 'Pause preview', exact: true })).toBeVisible();
     failPreview = true;
     await generate('MoveL').click();
     await expect(page.locator('.motion-preview-controls .ant-alert')).toContainText('Joint limit');

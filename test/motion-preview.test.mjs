@@ -10,7 +10,7 @@ const output = mkdtempSync(join(tmpdir(), 'rocos-preview-test-'));
 execFileSync('node_modules/.bin/tsc', ['--target', 'ES2020', '--module', 'commonjs', '--skipLibCheck',
   '--outDir', output, 'src/core/MotionPreview.ts', 'src/core/RobotApiClient.ts']);
 const require = createRequire(import.meta.url);
-const { validateMotionPreview, previewEndState, previewPositionsAt } = require(join(output, 'MotionPreview.js'));
+const { validateMotionPreview, previewEndState, previewPositionsAt, advancePreviewPlayback } = require(join(output, 'MotionPreview.js'));
 const { RobotApiClient } = require(join(output, 'RobotApiClient.js'));
 after(() => rmSync(output, { recursive: true, force: true }));
 const pose = { position: { x: 0, y: 0, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
@@ -65,4 +65,21 @@ test('virtual endpoint never overwrites actual state; playback interpolates by t
   assert.deepEqual(previewPositionsAt(trajectory(), 1), [0.5]);
   assert.deepEqual(previewPositionsAt(trajectory(), -1), [0]);
   assert.deepEqual(previewPositionsAt(trajectory(), 9), [1]);
+});
+
+test('playback restarts forward without losing elapsed time or changing planned speed', () => {
+  assert.ok(Math.abs(advancePreviewPlayback(1.8, 0.5, 2) - 0.3) < 1e-10);
+  assert.ok(Math.abs(advancePreviewPlayback(0.2, 0.5, 2) - 0.7) < 1e-10);
+  assert.equal(advancePreviewPlayback(0, 10, 2), 0);
+  assert.equal(advancePreviewPlayback(2, 0, 2), 0);
+  assert.equal(advancePreviewPlayback(0, 1, 0), 0);
+  const planned = { ...trajectory(), duration: 3, points: [
+    { time_from_start: 0, positions: [0] }, { time_from_start: 1, positions: [0.1] },
+    { time_from_start: 2, positions: [1.1] }, { time_from_start: 3, positions: [1.2] },
+  ] };
+  const positionAtElapsed = elapsed => previewPositionsAt(planned, advancePreviewPlayback(0, elapsed, 3))[0];
+  assert.ok(Math.abs(positionAtElapsed(0.5) - 0.05) < 1e-10);
+  assert.ok(Math.abs(positionAtElapsed(1.5) - 0.6) < 1e-10);
+  assert.ok(Math.abs(positionAtElapsed(2.5) - 1.15) < 1e-10);
+  for (const t of [0, 0.5, 1.5, 2.5, 3]) assert.ok(Math.abs(positionAtElapsed(t) - positionAtElapsed(3 + t)) < 1e-10);
 });

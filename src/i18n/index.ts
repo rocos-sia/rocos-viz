@@ -28,6 +28,7 @@ const DICT = {
   'preview.play': { en: 'Play preview', zh: '播放预览' },
   'preview.pause': { en: 'Pause preview', zh: '暂停预览' },
   'preview.progress': { en: 'Preview time', zh: '预览时间' },
+  'preview.loop': { en: 'Forward loop · Planned timing', zh: '按规划时间单向循环' },
   'preview.checks': { en: 'Position, speed and kinematics checked. Collision and live execution checks are not included.', zh: '已检查位置、速度和运动学；未进行碰撞及真机执行检查。' },
   'preview.reference': { en: 'Uses the virtual pose as the reference.', zh: '以虚拟机械臂的位姿为参考。' },
   'preview.fill': { en: 'Use virtual position', zh: '填写虚拟当前位置' },

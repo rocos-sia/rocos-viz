@@ -56,3 +56,9 @@ export function previewPositionsAt(preview: MotionPreview, time: number): number
   const fraction = (time - a.time_from_start) / (b.time_from_start - a.time_from_start);
   return a.positions.map((q, i) => q + (b.positions[i] - q) * fraction);
 }
+
+/** Repeat forward from the start, preserving the planner's timing each cycle. */
+export function advancePreviewPlayback(time: number, elapsed: number, duration: number): number {
+  if (duration <= 0) return 0;
+  return (time + Math.max(0, elapsed)) % duration;
+}

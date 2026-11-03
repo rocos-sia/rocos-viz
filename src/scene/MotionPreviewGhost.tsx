@@ -4,7 +4,7 @@ import { Line } from '@react-three/drei';
 import { Mesh, MeshStandardMaterial } from 'three';
 import type { URDFRobot } from 'urdf-loader';
 import { acquireControllerModel } from '@/core/ControllerModelCache';
-import { previewPositionsAt } from '@/core/MotionPreview';
+import { advancePreviewPlayback, previewPositionsAt } from '@/core/MotionPreview';
 import { useMotionPreviewStore } from '@/stores/motionPreviewStore';
 import { useT } from '@/i18n/useT';
 
@@ -16,7 +16,14 @@ export function MotionPreviewGhost({ xml, meshBase }: { xml: string; meshBase: s
   const trajectory = useMotionPreviewStore(s => s.trajectory);
   const [robots, setRobots] = useState<URDFRobot[]>([]);
   const moving = useRef<URDFRobot | null>(null);
+  const lastFrame = useRef<number | null>(null);
   useEffect(() => {
+    const resetClock = () => { lastFrame.current = null; };
+    document.addEventListener('visibilitychange', resetClock);
+    return () => document.removeEventListener('visibilitychange', resetClock);
+  }, []);
+  useEffect(() => {
+    lastFrame.current = null;
     if (mode !== 'simulation' || !trajectory) return;
     let cancelled = false;
     const releases: (() => void)[] = [];
@@ -39,7 +46,7 @@ export function MotionPreviewGhost({ xml, meshBase }: { xml: string; meshBase: s
             const mat = material as MeshStandardMaterial;
             mat.color?.set(GHOST_COLOR);
             mat.transparent = true;
-            mat.opacity = i === count ? 0.48 : 0.08 + 0.1 * i / Math.max(1, count - 1);
+            mat.opacity = i === count ? 0.55 : 0.03 + 0.05 * i / Math.max(1, count - 1);
             mat.depthWrite = false;
             mat.needsUpdate = true;
           });
@@ -53,17 +60,20 @@ export function MotionPreviewGhost({ xml, meshBase }: { xml: string; meshBase: s
     };
     void load().catch(() => {
       releases.forEach(release => release());
-      if (!cancelled) useMotionPreviewStore.setState({ error: t('preview.modelFailed') });
+      if (!cancelled) useMotionPreviewStore.setState({ error: t('preview.modelFailed'), playing: false });
     });
     return () => { cancelled = true; moving.current = null; setRobots([]); releases.forEach(release => release()); };
   }, [mode, trajectory, xml, meshBase, t]);
-  useFrame((_, delta) => {
+  useFrame(() => {
+    const now = performance.now();
+    const elapsed = lastFrame.current === null ? 0 : (now - lastFrame.current) / 1000;
+    lastFrame.current = now;
     const state = useMotionPreviewStore.getState();
     if (state.mode !== 'simulation' || !state.trajectory) return;
     let time = state.time;
-    if (state.playing && !document.hidden) {
-      time = Math.min(state.trajectory.duration, time + Math.min(delta, 0.1));
-      useMotionPreviewStore.setState({ time, playing: time < state.trajectory.duration });
+    if (state.playing && moving.current && !document.hidden) {
+      time = advancePreviewPlayback(time, elapsed, state.trajectory.duration);
+      useMotionPreviewStore.setState({ time });
     }
     if (moving.current) {
       const values = previewPositionsAt(state.trajectory, time);

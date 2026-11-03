@@ -27,7 +27,7 @@ export function MotionPreviewControls() {
     {error && <Alert type="error" showIcon message={t('preview.failed')} description={error} />}
     <div role="status" aria-live="polite" className="motion-preview-status">
       {pending ? t('preview.loading') : trajectory
-        ? `${trajectory.motion_type} · ${trajectory.duration.toFixed(2)} s · ${trajectory.points.length} ${t('preview.points')}`
+        ? `${trajectory.motion_type} · ${trajectory.duration.toFixed(2)} s · ${trajectory.points.length} ${t('preview.points')} · ${t('preview.loop')}`
         : t('preview.empty')}
     </div>
     {trajectory && <>
@@ -35,7 +35,7 @@ export function MotionPreviewControls() {
         <Button icon={playing ? <PauseOutlined aria-hidden="true" /> : <PlayCircleOutlined aria-hidden="true" />}
           disabled={pending || trajectory.duration === 0}
           aria-label={t(playing ? 'preview.pause' : 'preview.play')}
-          onClick={() => useMotionPreviewStore.setState({ playing: !playing, time: !playing && time >= trajectory.duration ? 0 : time })} />
+          onClick={() => useMotionPreviewStore.setState({ playing: !playing })} />
         <Slider min={0} max={trajectory.duration || 1} step={0.01} value={time}
           disabled={pending || trajectory.duration === 0} aria-label={t('preview.progress')}
           tooltip={{ formatter: value => `${value?.toFixed(2)} s` }}

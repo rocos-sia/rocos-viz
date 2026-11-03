@@ -3,6 +3,7 @@ import type { MotionPreview, RobotState } from '@/core/types';
 import { previewEndState } from '@/core/MotionPreview';
 import { useConnectionStore } from './connectionStore';
 import { useRobotStateStore } from './robotStateStore';
+import { useTeachStore } from './teachStore';
 
 interface PreviewStore {
   mode: 'real' | 'simulation';
@@ -34,8 +35,10 @@ export const useMotionPreviewStore = create<PreviewStore>((set, get) => ({
   accept: (trajectory, revision) => {
     const state = get();
     if (state.mode !== 'simulation' || revision !== state.revision || !state.virtualState) return;
+    const autoplay = trajectory.duration > 0 && !useTeachStore.getState().reducedMotion
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     set({ trajectory, virtualState: previewEndState(state.virtualState, trajectory),
-      pending: false, error: null, time: trajectory.duration, playing: false });
+      pending: false, error: null, time: 0, playing: autoplay });
   },
 }));
 
