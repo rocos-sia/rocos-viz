@@ -9,6 +9,7 @@ import type {
   TaskStatus,
   EnabledResponse,
   ScriptListData,
+  ScriptStatus,
   ControlOwnerData,
   ImpedanceData,
   SetImpedanceBody,
@@ -509,6 +510,18 @@ export class RobotApiClient {
   /** GET /api/script/list — 列出控制器 scripts 目录下的脚本相对路径 */
   async listScripts(): Promise<ScriptListData> {
     return this.request<ScriptListData>('GET', '/api/script/list');
+  }
+
+  async getScriptStatus(signal?: AbortSignal): Promise<ScriptStatus> {
+    return this.request('GET', '/api/script/status', undefined, undefined, signal);
+  }
+
+  async addScriptBreakpoint(filename: string, line: number): Promise<void> {
+    return this.request('POST', '/api/script/breakpoint/add', { filename, line });
+  }
+
+  async removeScriptBreakpoint(filename: string, line: number): Promise<void> {
+    return this.request('POST', '/api/script/breakpoint/remove', { filename, line });
   }
 
   /** GET /api/script/download — 下载原始 Lua 源码，无需控制权 */

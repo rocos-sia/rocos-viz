@@ -443,6 +443,8 @@ const DICT = {
   'teach.unsaved': { en: 'Unsaved changes', zh: '未保存更改' },
   'teach.draft': { en: 'Local draft', zh: '本地草稿' },
   'teach.runConfirm': { en: 'Upload this Lua source and run it on the connected robot?', zh: '上传此 Lua 源码并在已连接机器人上执行？' },
+  'teach.stepConfirm': { en: 'Upload this Lua source and start stepping on the connected robot?', zh: '上传此 Lua 源码并在已连接机器人上开始单步执行？' },
+  'teach.breakpointHint': { en: 'Click the gutter or press F9 to toggle a breakpoint. The highlighted line is the controller execution position.', zh: '点击行号左侧或按 F9 切换断点；高亮行表示控制器当前执行位置。' },
   'teach.scriptState': { en: 'Controller state', zh: '控制器状态' },
   'teach.newProgram': { en: 'New draft', zh: '新建草稿' },
   'teach.previewRun': { en: 'Run preview', zh: '运行演示' },

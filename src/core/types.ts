@@ -197,6 +197,19 @@ export interface ScriptListData {
   scripts: string[];
 }
 
+export interface ScriptLocation {
+  filename: string;
+  line: number;
+}
+
+export interface ScriptStatus extends ScriptLocation {
+  state: 'EMPTY' | 'LOADED' | 'RUNNING' | 'PAUSING' | 'PAUSED' | 'STOPPING' | 'COMPLETED' | 'FAILED' | 'STOPPED';
+  script_id: string;
+  error: string;
+  motion_active: boolean;
+  breakpoints: ScriptLocation[];
+}
+
 export interface ControlOwnerData {
   token?: string;
   has_owner: boolean;

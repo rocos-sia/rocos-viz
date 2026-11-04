@@ -42,6 +42,47 @@ test('lists relative script paths without requiring or sending control credentia
   assert.deepEqual(await client.listScripts(), data);
 });
 
+test('reads script execution location and breakpoints without control credentials and forwards cancellation', async (t) => {
+  const controller = new AbortController();
+  const status = { state: 'PAUSED', filename: 'examples/示例.lua', line: 3, script_id: 'script_1',
+    error: '', motion_active: false, breakpoints: [{ filename: 'examples/示例.lua', line: 3 }] };
+  const client = mockClient(t, async (url, options) => {
+    assert.equal(new URL(url).pathname, '/api/script/status');
+    assert.equal(options.method, 'GET');
+    assert.equal(options.signal, controller.signal);
+    assert.equal(options.headers['X-Rocos-Control-Token'], undefined);
+    assert.equal(options.headers['X-Rocos-Client-Id'], undefined);
+    return new Response(JSON.stringify({ success: true, code: 0, data: status }));
+  });
+  assert.deepEqual(await client.getScriptStatus(controller.signal), status);
+});
+
+test('breakpoint changes and stepping require both control credentials and preserve filenames and line numbers', async (t) => {
+  const calls = [];
+  const client = mockClient(t, async (url, options) => {
+    calls.push([new URL(url).pathname, options.body && JSON.parse(options.body)]);
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['X-Rocos-Control-Token'], 'test-token');
+    assert.equal(options.headers['X-Rocos-Client-Id'], 'test-client');
+    return new Response(JSON.stringify({ success: true, code: 0, data: {} }));
+  });
+  let token = null;
+  globalThis.sessionStorage = { getItem: (key) => key === 'rocos_client_id' ? 'test-client' : JSON.stringify({ state: { controlToken: token } }) };
+  await assert.rejects(client.addScriptBreakpoint('test.lua', 2), /No control right/);
+  await assert.rejects(client.removeScriptBreakpoint('test.lua', 2), /No control right/);
+  await assert.rejects(client.stepScript(), /No control right/);
+  assert.deepEqual(calls, []);
+  token = 'test-token';
+  await client.addScriptBreakpoint('examples/示例.lua', 3);
+  await client.removeScriptBreakpoint('examples/示例.lua', 3);
+  await client.stepScript();
+  assert.deepEqual(calls, [
+    ['/api/script/breakpoint/add', { filename: 'examples/示例.lua', line: 3 }],
+    ['/api/script/breakpoint/remove', { filename: 'examples/示例.lua', line: 3 }],
+    ['/api/script/step', undefined],
+  ]);
+});
+
 test('supports an empty script list and reports business errors', async (t) => {
   let fail = false;
   const client = mockClient(t, async () => new Response(JSON.stringify(fail

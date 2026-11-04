@@ -21,6 +21,7 @@
   --teach-success-bg: #f0fdf4;
   --teach-warning: #92400e;
   --teach-warning-bg: #fffbeb;
+  --teach-danger: #b91c1c;
   --teach-shadow: 0 2px 8px rgb(25 43 69 / 4%);
 }
 [data-theme='dark'] {
@@ -40,6 +41,7 @@
   --teach-success-bg: #183d32;
   --teach-warning: #fcd34d;
   --teach-warning-bg: #41351f;
+  --teach-danger: #fca5a5;
 }
 html, body, #root { width: 100%; height: 100%; margin: 0; }
 body, button, input, textarea, select, .ant-app, .ant-typography, .ant-modal, .ant-select, .ant-dropdown, .ant-message, .ant-notification, .blocklyText, .blocklyHtmlInput, .blocklyTreeLabel { font-family: AlibabaPuHuiTi; }
