@@ -30,16 +30,18 @@ function mockClient(t, fetch, host = '127.0.0.1') {
 
 test('lists relative script paths without requiring or sending control credentials', async (t) => {
   const data = { scripts: ['example.lua', 'examples/示例.lua'] };
+  const controller = new AbortController();
   const client = mockClient(t, async (url, options) => {
     assert.equal(url, 'http://localhost:5173/api/script/list');
     assert.equal(options.method, 'GET');
+    assert.equal(options.signal, controller.signal);
     assert.equal(options.headers['X-Rocos-Control-Token'], undefined);
     assert.equal(options.headers['X-Rocos-Client-Id'], undefined);
     return new Response(JSON.stringify({ success: true, code: 0, message: 'ok', data }), {
       headers: { 'Content-Type': 'application/json' },
     });
   });
-  assert.deepEqual(await client.listScripts(), data);
+  assert.deepEqual(await client.listScripts(controller.signal), data);
 });
 
 test('reads script execution location and breakpoints without control credentials and forwards cancellation', async (t) => {

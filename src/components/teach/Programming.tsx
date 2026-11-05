@@ -1,7 +1,7 @@
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Input, Popconfirm, Tabs, message } from 'antd';
-import { DownloadOutlined, ReloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Alert, Button, Input, Popconfirm, Spin, Tabs, Tooltip, message } from 'antd';
+import { BorderOutlined, CaretRightOutlined, DownloadOutlined, PauseOutlined, ReloadOutlined, PlayCircleOutlined, StepForwardOutlined } from '@ant-design/icons';
 import { basicSetup } from 'codemirror';
 import { Decoration, EditorView, gutter, GutterMarker, keymap } from '@codemirror/view';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
@@ -53,7 +53,7 @@ function LuaEditor({ breakpoints, currentLine, readOnly, canDebug, onToggleBreak
           '.cm-activeLine': { backgroundColor: 'var(--teach-selected)' },
           '.cm-breakpoints': { width: '20px', color: 'var(--teach-danger)', cursor: 'pointer' },
           '.cm-breakpoints .cm-gutterElement': { textAlign: 'center' },
-          '.cm-executionLine': { backgroundColor: 'var(--teach-warning-bg)', boxShadow: 'inset 3px 0 var(--teach-warning)' },
+          '.cm-line.cm-executionLine': { backgroundColor: 'var(--teach-execution-bg)', boxShadow: 'inset 4px 0 var(--teach-execution-marker)' },
         }),
         EditorView.updateListener.of((update) => { if (update.docChanged) setSource(update.state.doc.toString()); }),
       ],
@@ -112,6 +112,8 @@ export function Programming() {
   const statusRequest = useRef(0);
   const statusController = useRef<AbortController>();
   const [files, setFiles] = useState<string[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [libraryReload, setLibraryReload] = useState(0);
   const [filename, setFilename] = useState('program.lua');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -157,17 +159,29 @@ export function Programming() {
     } catch (e) { if (!controller.signal.aborted) message.error(String(e)); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   };
-  const refresh = async () => {
-    if (!connected) return;
-    try { const result = await new RobotApiClient(host, port).listScripts(); setFiles(result.scripts); setError(''); }
-    catch (e) { setError(String(e)); }
-  };
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    let retry: ReturnType<typeof setTimeout>;
     setFiles([]); setError('');
-    if (connected) new RobotApiClient(host, port).listScripts().then((result) => { if (!cancelled) setFiles(result.scripts); }).catch((e) => { if (!cancelled) setError(String(e)); });
-    return () => { cancelled = true; };
-  }, [connected, host, port]);
+    setFilesLoading(connected);
+    if (!connected) return () => controller.abort();
+    const load = async () => {
+      setFilesLoading(true);
+      try {
+        const result = await new RobotApiClient(host, port).listScripts(controller.signal);
+        if (!controller.signal.aborted) { setFiles(result.scripts); setError(''); }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          setError(String(e));
+          retry = setTimeout(() => void load(), 2000);
+        }
+      } finally {
+        if (!controller.signal.aborted) setFilesLoading(false);
+      }
+    };
+    void load();
+    return () => { controller.abort(); clearTimeout(retry); };
+  }, [connected, host, port, libraryReload]);
   const open = async (name: string) => {
     setFilename(name); setActive('lua');
     if (!connected) {
@@ -197,11 +211,15 @@ export function Programming() {
     finally { if (!controller.signal.aborted) setBusy(false); }
   };
   const canUpload = canDebug && !executing && !!source.trim() && !source.includes('PREVIEW ONLY');
-  const stepButton = <Button disabled={!canDebug || !enabled || (executing ? !paused : !canUpload)} onClick={paused ? () => void command('step') : undefined}>{t('teach.singleStep')}</Button>;
+  const stepButton = <Button type="text" icon={<StepForwardOutlined />} aria-label={t('teach.singleStep')} disabled={!canDebug || !enabled || (executing ? !paused : !canUpload)} onClick={paused ? () => void command('step') : undefined} />;
   return <div className="teach-programming" data-motion>
-    <TeachCard title={t('teach.programLibrary')} extra={connected ? <Button icon={<ReloadOutlined />} aria-label={t('teach.refresh')} onClick={() => void refresh()} /> : <DemoBadge />}>
+    <TeachCard title={t('teach.programLibrary')} extra={connected ? <Button icon={<ReloadOutlined />} loading={filesLoading} aria-label={t('teach.refresh')} onClick={() => setLibraryReload((value) => value + 1)} /> : <DemoBadge />}>
       {error && <Alert type="error" message={t('teach.loadFailed')} description={error} />}
-      <div className="teach-file-list">{(connected ? files : demoPrograms.map((p) => p.name)).map((name) => <Button type={filename === name ? 'primary' : 'text'} key={name} onClick={() => void open(name)}>{name}</Button>)}</div>
+      <div className="teach-file-list" aria-busy={filesLoading}>
+        {filesLoading && <div role="status" className="teach-library-status"><Spin size="small" /> {t('teach.loadingScripts')}</div>}
+        {connected && !filesLoading && !error && files.length === 0 && <p className="teach-muted">{t('teach.noScripts')}</p>}
+        {(connected ? files : demoPrograms.map((p) => p.name)).map((name) => <Button type={filename === name ? 'primary' : 'text'} key={name} onClick={() => void open(name)}>{name}</Button>)}
+      </div>
       <Button block onClick={() => { setFilename('program.lua'); useTeachStore.getState().setSource('-- ROCOS HMI\nfunction main()\nend\n'); }}>{t('teach.newProgram')}</Button>
       <p className="teach-muted">{t('teach.draft')}</p>
     </TeachCard>
@@ -214,11 +232,11 @@ export function Programming() {
             <Button disabled={!canUpload} loading={busy} onClick={() => void command('upload')}>{t('teach.upload')}</Button>
             <Popconfirm title={t('teach.runConfirm')} onConfirm={() => command('run')}><Button type="primary" icon={<PlayCircleOutlined />} disabled={!canUpload || !enabled}>{t('teach.runScript')}</Button></Popconfirm>
           </div><LuaEditor breakpoints={breakpoints} currentLine={currentLine} readOnly={executing && sameFile} canDebug={canDebug} onToggleBreakpoint={(line) => void toggleBreakpoint(line)} />
-          <p className="teach-muted">{t('teach.breakpointHint')}</p><div className="teach-button-row">
-            <Button disabled={!connected || !token || busy || status?.state !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
-            <Button disabled={!canDebug || !enabled || !paused} onClick={() => void command('resume')}>{t('teach.resume')}</Button>
-            {paused ? stepButton : <Popconfirm title={t('teach.stepConfirm')} onConfirm={() => command('step')}>{stepButton}</Popconfirm>}
-            <Button danger disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.softwareStop')}</Button>
+          <p className="teach-muted">{t('teach.breakpointHint')}</p><div className="teach-button-row teach-debug-toolbar" role="group" aria-label={t('teach.scriptDebug')}>
+            <Tooltip title={t('teach.pause')}><span><Button type="text" icon={<PauseOutlined />} aria-label={t('teach.pause')} disabled={!connected || !token || busy || status?.state !== 'RUNNING'} onClick={() => void command('pause')} /></span></Tooltip>
+            <Tooltip title={t('teach.resume')}><span><Button type="text" icon={<CaretRightOutlined />} aria-label={t('teach.resume')} disabled={!canDebug || !enabled || !paused} onClick={() => void command('resume')} /></span></Tooltip>
+            <Tooltip title={t('teach.singleStep')}><span>{paused ? stepButton : <Popconfirm title={t('teach.stepConfirm')} onConfirm={() => command('step')}>{stepButton}</Popconfirm>}</span></Tooltip>
+            <Tooltip title={t('teach.softwareStop')}><span><Button type="text" danger icon={<BorderOutlined />} aria-label={t('teach.softwareStop')} disabled={!connected || !token} onClick={() => void command('stop')} /></span></Tooltip>
           </div>
         </> },
         { key: 'blocks', label: <>{t('teach.blocks')} <DemoBadge /></>, children: <Suspense fallback={<div>…</div>}><BlockEditor /></Suspense> },

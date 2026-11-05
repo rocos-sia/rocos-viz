@@ -508,8 +508,8 @@ export class RobotApiClient {
   // ─── Lua Script ───────────────────────────────────────────────
 
   /** GET /api/script/list — 列出控制器 scripts 目录下的脚本相对路径 */
-  async listScripts(): Promise<ScriptListData> {
-    return this.request<ScriptListData>('GET', '/api/script/list');
+  async listScripts(signal?: AbortSignal): Promise<ScriptListData> {
+    return this.request<ScriptListData>('GET', '/api/script/list', undefined, undefined, signal);
   }
 
   async getScriptStatus(signal?: AbortSignal): Promise<ScriptStatus> {
