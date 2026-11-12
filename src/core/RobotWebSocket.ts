@@ -51,6 +51,7 @@ function mapState(raw: any): RobotState {
     active_object_frame_name: raw.active_object_frame_name,
     hw_state: raw.hw_state ?? {},
     robot_state: raw.robot_state,
+    rci: raw.rci,
     work_mode: raw.work_mode,
     is_enabled: raw.is_enabled,
     is_running: raw.is_running,

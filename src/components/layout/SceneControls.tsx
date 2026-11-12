@@ -3,7 +3,7 @@ import { Tooltip, message } from 'antd';
 import { DeploymentUnitOutlined, AimOutlined, BorderBottomOutlined, NodeIndexOutlined, WarningOutlined } from '@ant-design/icons';
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { useUIStore } from '@/stores/uiStore';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { TrajectoryLine } from '@/scene/TrajectoryLine';
@@ -67,7 +67,7 @@ export function SceneToggles({ style }: { style?: React.CSSProperties }) {
 export function ResetButton() {
   const t = useT();
   const compact = useCompactScreen();
-  const token = useConnectionStore((s) => s.controlToken);
+  const token = useConnectionStore(selectWriteToken);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);
   const isConnected = useConnectionStore((s) => s.isConnected);

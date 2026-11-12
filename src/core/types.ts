@@ -49,7 +49,18 @@ export interface HardwareInfo {
   state?: number;
 }
 
+export interface RciStatus {
+  enabled: boolean;
+  closing: boolean;
+  control_active: boolean;
+  robot_state: string;
+  last_control: { fault_code: number } | null;
+  current_control?: { fault_code: number };
+}
+
 export interface RobotState {
+  rci?: RciStatus;
+
   joint_states: JointState[];
   flange?: Pose;
   /** 基座到当前 TCP；null 表示后端无法求解，缺省表示旧版 App。 */
@@ -60,7 +71,7 @@ export interface RobotState {
   active_object_frame?: Pose;
   active_object_frame_name?: string;
   hw_state?: HardwareInfo;
-  /** 机器人顶层状态字符串，如 "STOPPED", "RUNNING", "IDLE" */
+  /** 机器人顶层状态字符串，如 "STOPPED", "RCI", "RUNNING", "IDLE" */
   robot_state?: string;
   /** 当前工作模式，如 "position", "jnt_imp", "cart_imp", "jnt_admit_teach" 等 */
   work_mode?: string;

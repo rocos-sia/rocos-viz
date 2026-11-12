@@ -27,6 +27,7 @@ export function useRobotConnection() {
   const syncState = useCallback(
     (state: RobotState) => {
       updateState(state);
+      useConnectionStore.getState().setRci(state.rci ?? null);
       if (state.is_enabled !== undefined) {
         setEnabled(state.is_enabled);
       }
@@ -83,7 +84,7 @@ export function useRobotConnection() {
 
     const { host, port } = useConnectionStore.getState();
 
-    ws.connect(host, parseInt(port), (state) => { if (epoch === generation.current) syncState(state); }, (status) => {
+    ws.connect(host, parseInt(port), (state) => { if (epoch === generation.current && !fallbackRef.current) syncState(state); }, (status) => {
       if (epoch !== generation.current) return;
       if (status === 'disconnected' && !fallbackRef.current) {
         fallbackRef.current = true;
@@ -106,6 +107,7 @@ export function useRobotConnection() {
 
   useEffect(() => {
     generation.current++;
+    useConnectionStore.getState().setRci(null);
     let clearFallback: (() => void) | undefined;
     if (isConnected) {
       fallbackRef.current = false;

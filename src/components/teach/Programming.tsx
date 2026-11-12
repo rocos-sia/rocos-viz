@@ -8,7 +8,7 @@ import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { StreamLanguage } from '@codemirror/language';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
 import { RobotApiClient } from '@/core/RobotApiClient';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import type { ScriptStatus } from '@/core/types';
 import { useTeachStore, demoPrograms } from '@/stores/teachStore';
 import { useT } from '@/i18n/useT';
@@ -103,7 +103,7 @@ export function Programming() {
   const t = useT();
   const compact = useCompactScreen();
   const connected = useConnectionStore((s) => s.isConnected);
-  const token = useConnectionStore((s) => s.controlToken);
+  const token = useConnectionStore(selectWriteToken);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);

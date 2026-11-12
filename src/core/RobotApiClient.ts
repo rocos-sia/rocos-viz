@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   RobotInfo,
   RobotState,
+  RciStatus,
   Pose,
   MotionResponse,
   MotionPreviewRequest,
@@ -68,6 +69,7 @@ function mapState(raw: any): RobotState {
     active_object_frame_name: raw.active_object_frame_name,
     hw_state: raw.hw_state ?? {},
     robot_state: raw.robot_state,
+    rci: raw.rci,
     work_mode: raw.work_mode,
     is_enabled: raw.is_enabled,
     is_running: raw.is_running,
@@ -118,6 +120,12 @@ export class RobotApiClient {
     }
   }
 
+  static assertWritable(): void {
+    const state = JSON.parse(sessionStorage.getItem('rocos-connection') ?? '{}').state;
+    if (state && (state.rci == null || state.rci.enabled || state.rciBusy || state.rciPhase))
+      throw new Error('RCI monitoring or transition is read-only');
+  }
+
   /** 获取或创建当前标签页的 client_id（sessionStorage 隔离，防止跨标签页窃取 token） */
   static getClientId(): string {
     const key = 'rocos_client_id';
@@ -155,6 +163,7 @@ export class RobotApiClient {
     body?: any,
     params?: Record<string, string>,
     signal?: AbortSignal,
+    controlToken?: string,
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
@@ -170,10 +179,13 @@ export class RobotApiClient {
       headers['Content-Type'] = 'application/json';
     }
     if (method !== 'GET' && !(method === 'POST' && path === '/api/robot/motion/preview')) {
-      const token = RobotApiClient.getStoredToken();
+      if (!path.startsWith('/api/robot/rci/')) RobotApiClient.assertWritable();
+      const token = controlToken ?? RobotApiClient.getStoredToken();
+      if (path !== '/api/robot/rci/stop') {
       if (!token) throw new Error('No control right; acquire control before operating (code: 3006)');
       headers['X-Rocos-Control-Token'] = token;
       headers['X-Rocos-Client-Id'] = RobotApiClient.getClientId();
+      }
     }
 
     const options: RequestInit = {
@@ -201,6 +213,22 @@ export class RobotApiClient {
     }
 
     return json.data;
+  }
+
+  async getRciStatus(): Promise<RciStatus> {
+    return this.request('GET', '/api/robot/rci/status', undefined, undefined, AbortSignal.timeout(5000));
+  }
+
+  async enableRci(token: string): Promise<RciStatus> {
+    return this.request('POST', '/api/robot/rci/enable', {}, undefined, AbortSignal.timeout(5000), token);
+  }
+
+  async disableRci(token: string): Promise<RciStatus> {
+    return this.request('POST', '/api/robot/rci/disable', {}, undefined, AbortSignal.timeout(5000), token);
+  }
+
+  async stopRci(): Promise<RciStatus> {
+    return this.request('POST', '/api/robot/rci/stop', {});
   }
 
   // ─── Robot State ──────────────────────────────────────────────
@@ -233,6 +261,7 @@ export class RobotApiClient {
   /** POST /api/robot/reset — 清除报警并复位，仅在 ERROR_STATE 下有效。
    *  不抛出，返回原始响应，由调用方判断 success。 */
   async resetRobot(): Promise<ApiResponse<{ robot_state: string; enabled: boolean }>> {
+    RobotApiClient.assertWritable();
     const url = new URL('/api/robot/reset', this.baseUrl);
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -460,6 +489,7 @@ export class RobotApiClient {
 
   /** POST /api/robot/urdf — 上传 URDF 文件到控制器，返回存储路径 */
   async uploadUrdf(file: File): Promise<{ path: string }> {
+    RobotApiClient.assertWritable();
     const url = new URL('/api/robot/urdf', this.baseUrl);
     const formData = new FormData();
     formData.append('file', file);
@@ -653,6 +683,7 @@ export class RobotApiClient {
   }
 
   async importToolFile(file: File, installation: boolean, expectedDigest?: string, signal?: AbortSignal): Promise<void> {
+    RobotApiClient.assertWritable();
     const token = RobotApiClient.getStoredToken();
     if (!token) throw new Error('No control right (code: 3006)');
     const url = new URL(installation ? '/api/robot/tool_package/installation' : '/api/robot/tool_packages/import', this.baseUrl);
@@ -703,7 +734,7 @@ export class RobotApiClient {
     const bodyObj: Record<string, string> = { client_id: clientId };
     if (clientName) bodyObj.client_name = clientName;
     const response = await fetch(url.toString(), {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(5000),
       headers: {
         'Content-Type': 'application/json',
         'X-Rocos-Client-Id': clientId,
@@ -720,7 +751,7 @@ export class RobotApiClient {
     const bodyObj: Record<string, string> = { client_id: clientId };
     if (clientName) bodyObj.client_name = clientName;
     const response = await fetch(url.toString(), {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(5000),
       headers: {
         'Content-Type': 'application/json',
         'X-Rocos-Client-Id': clientId,
@@ -734,7 +765,7 @@ export class RobotApiClient {
   async releaseControl(token: string): Promise<void> {
     const url = new URL('/api/control/release', this.baseUrl);
     const response = await fetch(url.toString(), {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(5000),
       headers: {
         'X-Rocos-Control-Token': token,
         'X-Rocos-Client-Id': RobotApiClient.getClientId(),
@@ -760,10 +791,10 @@ export class RobotApiClient {
   }
 
   /** GET /api/control/status — 只读查询，不续期。 */
-  async getControlStatus(): Promise<ApiResponse<ControlOwnerData>> {
+  async getControlStatus(signal?: AbortSignal): Promise<ApiResponse<ControlOwnerData>> {
     const url = new URL('/api/control/status', this.baseUrl);
     const headers: Record<string, string> = { Accept: 'application/json' };
-    const response = await fetch(url.toString(), { headers });
+    const response = await fetch(url.toString(), { headers, signal });
     return response.json() as Promise<ApiResponse<ControlOwnerData>>;
   }
 

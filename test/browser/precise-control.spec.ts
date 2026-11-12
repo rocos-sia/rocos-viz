@@ -99,7 +99,7 @@ test('precise commands preserve tab targets, convert frames and block invalid or
     useRobotStateStore.getState().updateState(updated);
     return updated;
   });
-  await expect(page.getByRole('status')).toContainText('当前参考坐标系数据不可用');
+  await expect(page.getByRole('main').getByRole('status')).toContainText('当前参考坐标系数据不可用');
   await expect(page.locator('.precise-actions button').first()).toBeDisabled();
   await targets.getByText('关节位置', { exact: true }).click();
   await expect(page.locator('.precise-actions button').first()).toBeEnabled();

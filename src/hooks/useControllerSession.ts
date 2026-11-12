@@ -5,6 +5,7 @@ import { RobotApiClient } from '@/core/RobotApiClient';
 import { getControllerUrdf, preloadControllerModel } from '@/core/ControllerModelCache';
 import { startControlHeartbeat } from '@/core/ControlHeartbeat';
 import { useRobotConnection } from './useRobotConnection';
+import { useRciControl } from './useRciControl';
 import { useT } from '@/i18n/useT';
 
 /** One controller session owned by the application shell, never by a route. */
@@ -34,32 +35,12 @@ export function useControllerSession() {
     }
   }, [host, port]);
 
-  const handleTakeover = useCallback(async () => {
-    try {
-      const client = new RobotApiClient(host, port);
-      const result = await client.takeoverControl(`web-${navigator.platform}`);
-      const connection = useConnectionStore.getState();
-      if (!connection.isConnected || connection.host !== host || connection.port !== port) {
-        if (result.success && result.data?.token) await client.releaseControl(result.data.token);
-        return;
-      }
-      if (result.success && result.data?.token) {
-        setControlToken(result.data.token);
-        setControlAcquiredAt(Date.now());
-        setControlOwner(result.data.owner_name ?? null, result.data.owner_ip ?? null);
-        if (result.data.client_id) {
-          sessionStorage.setItem('rocos_client_id', result.data.client_id);
-        }
-        message.success(t('control.takeoverSuccess'));
-      } else {
-        message.error(t('control.takeoverFailed', { msg: result.message }));
-      }
-    } catch (err) {
-      message.error(t('control.takeoverFailed', { msg: err instanceof Error ? err.message : String(err) }));
-    }
-  }, [host, port, setControlToken, setControlAcquiredAt, setControlOwner, t]);
+  const { toggleRci, takeControl: handleTakeover } = useRciControl();
+  const rci = useConnectionStore(s => s.rci);
+  const rciBusy = useConnectionStore(s => s.rciBusy);
+  const rciPhase = useConnectionStore(s => s.rciPhase);
 
-  // Acquire control right after connecting
+  // Resolve RCI before acquiring control or restoring a saved HTTP lease.
   useEffect(() => {
     if (!isConnected) {
       setControlToken(null);
@@ -68,13 +49,19 @@ export function useControllerSession() {
       return;
     }
     // A page reload can restore this tab's credentials; heartbeat validates them.
-    if (useConnectionStore.getState().controlToken) return;
 
     let cancelled = false;
 
     async function acquireControl() {
       try {
         const client = new RobotApiClient(host, port);
+        const observed = useConnectionStore.getState().rci;
+        const fetched = await client.getRciStatus();
+        if (cancelled) return;
+        const latest = useConnectionStore.getState().rci;
+        const status = latest !== observed && latest ? latest : fetched;
+        useConnectionStore.getState().setRci(status);
+        if (status.enabled || useConnectionStore.getState().rciBusy || useConnectionStore.getState().controlToken) return;
         const result = await client.acquireControl(`web-${navigator.platform}`);
         if (cancelled) {
           if (result.success && result.data?.token) await client.releaseControl(result.data.token);
@@ -105,7 +92,7 @@ export function useControllerSession() {
 
   // Renew ownership independently of buttons, robot motion, or read-only polling.
   useEffect(() => {
-    if (!isConnected || !controlToken) return;
+    if (!isConnected || !controlToken || !rci || rciPhase === 'releasing' || (rci.enabled && rciPhase !== 'exiting') || (rciBusy && rciPhase === 'entering')) return;
     const client = new RobotApiClient(host, port);
     return startControlHeartbeat({
       heartbeat: (signal) => client.heartbeatControl(controlToken, signal),
@@ -117,7 +104,7 @@ export function useControllerSession() {
       },
       onError: (error) => console.warn('Control heartbeat failed; retrying without takeover', error),
     });
-  }, [isConnected, host, port, controlToken, setControlToken, setControlAcquiredAt, t]);
+  }, [isConnected, host, port, controlToken, rci?.enabled, rciBusy, rciPhase, setControlToken, setControlAcquiredAt, t]);
 
   // Poll control status every 1s: detects expiry, server-side token rejection, and takeover
   useEffect(() => {
@@ -203,5 +190,5 @@ export function useControllerSession() {
     return () => { cancelled = true; };
   }, [isConnected, host, port, autoLoadModel, t]);
 
-  return { urdfContent, handleDisconnect, handleTakeover, controlOwnerName, controlOwnerIp };
+  return { urdfContent, handleDisconnect, handleTakeover, toggleRci, controlOwnerName, controlOwnerIp };
 }

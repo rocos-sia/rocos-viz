@@ -14,6 +14,7 @@ import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useControlStore } from '@/stores/controlStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
+import { RciButton, RciStatusBar } from '@/components/control/RciStatus';
 import { EnableButton } from '@/components/control/EnableButton';
 import { FrameSelector } from '@/components/control/FrameSelector';
 import { Overview } from './Overview';
@@ -68,10 +69,12 @@ function StatusStrip() {
   </div>;
 }
 
-function ControlBar() {
+function ControlBar({ onToggleRci }: { onToggleRci: () => Promise<void> }) {
   const t = useT();
   const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
   const connected = useConnectionStore((s) => s.isConnected);
+  const rci = useConnectionStore(s => s.rci);
+  const readOnly = useConnectionStore(s => !s.rci || s.rci.enabled || s.rciBusy || !!s.rciPhase);
   const token = useConnectionStore((s) => s.controlToken);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
   const status = useRobotStateStore((s) => s.robotState?.robot_state);
@@ -85,27 +88,28 @@ function ControlBar() {
     return () => query.removeEventListener('change', change);
   }, []);
   const command = async (kind: 'resume' | 'pause' | 'stop') => {
-    if (!connected || !token || (kind !== 'stop' && useMotionPreviewStore.getState().mode === 'simulation')) return;
+    if (!connected || (!token && !(kind === 'stop' && rci?.enabled)) || (kind !== 'stop' && useMotionPreviewStore.getState().mode === 'simulation')) return;
     const { host, port } = useConnectionStore.getState();
     const client = new RobotApiClient(host, port);
     if (kind !== 'stop') setBusy(true);
     try {
-      if (kind === 'stop') await client.stopMove();
+      if (kind === 'stop') { if (rci?.enabled) await client.stopRci(); else await client.stopMove(); }
       else if (kind === 'pause') await client.pauseMotion();
       else await client.resumeMotion();
       message.success(t('common.sent', { cmd: t(`teach.${kind === 'stop' ? 'softwareStop' : kind}`) }));
     } catch (e) { message.error(String(e)); }
     finally { setBusy(false); }
   };
-  const allowed = !simulation && connected && !!token && enabled && !small;
+  const allowed = !readOnly && !simulation && connected && !!token && enabled && !small;
   return <footer className="teach-controlbar">
     <div className="teach-controlbar-state"><i className={connected ? 'connected' : ''} /><span>{connected ? status ?? t('teach.unknown') : t('teach.offline')}</span><small>{t(simulation ? 'preview.simulation' : small ? 'teach.smallReadOnly' : 'teach.jogReason')}</small></div>
     <div className="teach-speed"><label>{t('teach.speed')}</label><Slider aria-label={t('teach.speed')} min={1} max={99} value={Math.round(speed * 100)} onChange={(v) => useControlStore.getState().setSpeedFactor(v / 100)} /><strong>{Math.round(speed * 100)}%</strong></div>
     <div className="teach-run-buttons">
-      <EnableButton iconOnly disabled={small || simulation} />
+      <RciButton onToggle={onToggleRci} />
+      <EnableButton iconOnly disabled={small || simulation || readOnly} />
       <Button icon={<CaretRightOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'PAUSED'} onClick={() => void command('resume')}>{t('teach.run')}</Button>
       <Button icon={<PauseOutlined aria-hidden="true" />} disabled={!allowed || busy || status !== 'RUNNING'} onClick={() => void command('pause')}>{t('teach.pause')}</Button>
-      <Button danger icon={<span className="teach-stop-icon" aria-hidden="true" />} disabled={!connected || !token} onClick={() => void command('stop')}>{t('teach.stop')}</Button>
+      <Button danger icon={<span className="teach-stop-icon" aria-hidden="true" />} disabled={!connected || (!token && !rci?.enabled)} onClick={() => void command('stop')}>{t('teach.stop')}</Button>
     </div>
   </footer>;
 }
@@ -126,8 +130,8 @@ export function TeachShell() {
   return <PersistentRobotScenes urdfContent={session.urdfContent}><div className={`teach-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`} data-reduced-motion={reducedMotion}>
     <SoftwareUpdateNotifier />
     <header className="teach-topbar">
-      <StatusStrip />
-      <HeaderAccount />
+      <div className="teach-topbar-row"><StatusStrip /><HeaderAccount /></div>
+      <RciStatusBar />
     </header>
     <aside className="teach-sidebar">
       <Tooltip title={t(sidebarCollapsed ? 'teach.expandSidebar' : 'teach.collapseSidebar')} placement="right">
@@ -156,6 +160,6 @@ export function TeachShell() {
         </Routes>
       </Suspense>
     </main>
-    <ControlBar />
+    <ControlBar onToggleRci={session.toggleRci} />
   </div></PersistentRobotScenes>;
 }

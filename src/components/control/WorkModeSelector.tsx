@@ -1,6 +1,6 @@
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { Select, message } from 'antd';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { WORK_MODES } from '@/core/constants';
@@ -12,7 +12,7 @@ export function WorkModeSelector() {
   const compact = useCompactScreen();
   const isConnected = useConnectionStore((s) => s.isConnected);
   const { host, port } = useConnectionStore.getState();
-  const token = useConnectionStore((s) => s.controlToken);
+  const token = useConnectionStore(selectWriteToken);
   const workMode = useRobotStateStore((s) => s.robotState?.work_mode);
 
   const modeLabel = (value: string) => t(`mode.${value}` as TranslationKey);

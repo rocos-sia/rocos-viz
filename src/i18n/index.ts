@@ -14,6 +14,27 @@ export type Language = 'en' | 'zh';
 type Entry = { en: string; zh: string };
 
 const DICT = {
+  'rci.exitTip': { en: 'Acquire control, request a controlled stop, then exit RCI', zh: '申请控制权，受控停止后退出 RCI' },
+  "rci.off": { en: "RCI off", zh: "RCI 已关闭" },
+  "rci.ready": { en: "RCI ready \u00b7 read-only monitoring", zh: "RCI 待命 · 只读监控" },
+  "rci.active": { en: "RCI \u00b7 external program controlling", zh: "RCI · 外部程序控制中" },
+  "rci.stopping": { en: "RCI \u00b7 stopping", zh: "RCI · 正在停止" },
+  "rci.closing": { en: "RCI \u00b7 exiting", zh: "RCI · 正在退出" },
+  "rci.releasing": { en: "RCI \u00b7 control release pending", zh: "RCI · 控制权释放待确认" },
+  "rci.entering": { en: "RCI \u00b7 enabling", zh: "RCI · 正在开启" },
+  "rci.unknown": { en: "RCI unknown \u00b7 waiting for controller state", zh: "RCI 状态未知 · 等待控制器状态" },
+  "rci.error": { en: "Robot fault \u00b7 RCI closed \u00b7 see Diagnostics", zh: "机器人故障 · RCI 已关闭 · 请查看诊断" },
+  "rci.takeoverConfirm": { en: "Control is held by {owner}. Taking over invalidates their credentials and stops active RCI motion before exiting RCI.", zh: "当前控制权由 {owner} 持有。抢占将使其凭据失效，并受控停止活动的 RCI 运动后退出 RCI。" },
+  "rci.takeoverEnter": { en: "Take over and enable RCI", zh: "抢占并开启 RCI" },
+  "rci.takeoverExit": { en: "Take over and exit RCI", zh: "抢占并退出 RCI" },
+  "rci.cancel": { en: "Cancel", zh: "取消" },
+  "rci.connectionChanged": { en: "Controller connection changed", zh: "控制器连接已变化" },
+  "rci.waitTimeout": { en: "Waiting for controlled stop timed out. Check controller status.", zh: "等待受控停止超时，请检查控制器状态。" },
+  "rci.entered": { en: "RCI enabled \u00b7 HTTP control released", zh: "RCI 已开启 · HTTP 控制权已释放" },
+  "rci.exited": { en: "RCI closed \u00b7 control acquired", zh: "RCI 已关闭 · 已取得控制权" },
+  "rci.requireStopped": { en: "Enable the robot and wait for STOPPED to enter RCI", zh: "开启 RCI 需要机械臂已使能且处于 STOPPED" },
+  "rci.toggle": { en: "RCI switch", zh: "RCI 开关" },
+
   'preview.timeout': { en: 'Preview timed out. Please retry.', zh: '预览请求超时，请重试。' },
   'preview.mode': { en: 'Motion mode', zh: '运动模式' },
   'preview.real': { en: 'Real robot', zh: '真机' },

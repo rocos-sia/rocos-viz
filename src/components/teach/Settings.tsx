@@ -5,7 +5,7 @@ import { Button, Popconfirm, Segmented, Switch, Tabs } from 'antd';
 import { DisconnectOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useUIStore } from '@/stores/uiStore';
 import { useTeachStore } from '@/stores/teachStore';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { ImpedancePanel } from '@/components/settings/ImpedancePanel';
 import { useT } from '@/i18n/useT';
 import { version } from '../../../package.json';
@@ -26,10 +26,11 @@ export function Settings({ onDisconnect, onTakeover }: {
   const theme = useUIStore((s) => s.themeMode);
   const reducedMotion = useTeachStore((s) => s.reducedMotion);
   const connected = useConnectionStore((s) => s.isConnected);
+  const writeToken = useConnectionStore(selectWriteToken);
   const token = useConnectionStore((s) => s.controlToken);
   const host = useConnectionStore((s) => s.host);
   const port = useConnectionStore((s) => s.port);
-  const owner = useConnectionStore((s) => s.controlOwnerName ?? s.controlOwnerIp);
+  const rciBusy = useConnectionStore(s => s.rciBusy || s.rciPhase === 'releasing');
   return <div className="teach-page teach-settings" data-motion><Tabs className="teach-fill-tabs" activeKey={activeTab}
     onChange={(tab) => setParams((previous) => { const next = new URLSearchParams(previous); next.set('tab', tab); return next; }, { replace: true })} items={[
     { key: 'appearance', label: t('teach.appearance'), children: <div className="teach-two-col">
@@ -50,9 +51,7 @@ export function Settings({ onDisconnect, onTakeover }: {
         </div>
         <ConnectionSettings />
         {connected && <div className="teach-setting-row"><span>{t('teach.ownership')}</span>
-          {token ? <strong>{t('teach.local')}</strong> : <Popconfirm title={t('control.takeoverTitle')} description={t('control.takeoverConfirm', { owner: owner ?? t('teach.unknown') })} onConfirm={onTakeover}>
-            <Button icon={<SafetyCertificateOutlined aria-hidden="true" />}>{t('control.takeover')}</Button>
-          </Popconfirm>}
+          {token ? <strong>{t('teach.local')}</strong> : <Button disabled={rciBusy} onClick={() => void onTakeover()} icon={<SafetyCertificateOutlined aria-hidden="true" />}>{t('control.takeover')}</Button>}
         </div>}
     </TeachCard> },
     { key: 'units', label: t('settings.units'), children: <TeachCard title={t('settings.units')}>
@@ -65,7 +64,7 @@ export function Settings({ onDisconnect, onTakeover }: {
         <div className="teach-setting-row"><span>{t('settings.mass')}</span><Segmented aria-label={t('settings.mass')} value={units.massUnit} options={['kg', 'g']} onChange={(value) => units.setUnits({ massUnit: value as 'kg' | 'g' })} /></div>
       </div>
     </TeachCard> },
-    { key: 'impedance', label: t('teach.impedance'), children: <TeachCard title={t('teach.impedance')}><p className="teach-muted">{!connected || !token ? t('teach.jogReason') : t('teach.live')}</p><fieldset disabled={compact || !connected || !token} className="teach-fieldset"><ImpedancePanel /></fieldset></TeachCard> },
+    { key: 'impedance', label: t('teach.impedance'), children: <TeachCard title={t('teach.impedance')}><p className="teach-muted">{!connected || !token ? t('teach.jogReason') : t('teach.live')}</p><fieldset disabled={compact || !connected || !writeToken} className="teach-fieldset"><ImpedancePanel /></fieldset></TeachCard> },
     { key: 'updates', label: t('updates.title'), children: <SoftwareUpdates /> },
   ]} /></div>;
 }

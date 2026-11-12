@@ -116,3 +116,26 @@ test('transient failures retry; a hung request is aborted', async (t) => {
   assert.equal(errors, 1);
   assert.ok(calls >= 2);
 });
+
+test('RCI monitoring blocks regular and direct writes while allowing credential-free stop', async () => {
+  globalThis.window = { location: { origin: 'http://localhost:5184', protocol: 'http:' } };
+  const calls = [];
+  const oldFetch = globalThis.fetch;
+  globalThis.sessionStorage = { getItem: key => key === 'rocos_client_id' ? 'this-tab' :
+    JSON.stringify({ state: { controlToken: 'temporary-exit-token', rci: { enabled: true } } }) };
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    return new Response(JSON.stringify({ success: true, code: 0, data: {} }));
+  };
+  try {
+    const client = new RobotApiClient('127.0.0.1', 8080);
+    await assert.rejects(client.enable(), /read-only/);
+    await assert.rejects(client.resetRobot(), /read-only/);
+    await assert.rejects(client.importToolFile({}, false), /read-only/);
+    await assert.rejects(client.uploadUrdf({}), /read-only/);
+    assert.equal(calls.length, 0);
+    await client.stopRci();
+    assert.equal(new URL(calls[0].url).pathname, '/api/robot/rci/stop');
+    assert.equal(calls[0].options.headers['X-Rocos-Control-Token'], undefined);
+  } finally { globalThis.fetch = oldFetch; }
+});

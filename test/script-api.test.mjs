@@ -69,7 +69,7 @@ test('breakpoint changes and stepping require both control credentials and prese
     return new Response(JSON.stringify({ success: true, code: 0, data: {} }));
   });
   let token = null;
-  globalThis.sessionStorage = { getItem: (key) => key === 'rocos_client_id' ? 'test-client' : JSON.stringify({ state: { controlToken: token } }) };
+  globalThis.sessionStorage = { getItem: (key) => key === 'rocos_client_id' ? 'test-client' : JSON.stringify({ state: { controlToken: token, rci: { enabled: false } } }) };
   await assert.rejects(client.addScriptBreakpoint('test.lua', 2), /No control right/);
   await assert.rejects(client.removeScriptBreakpoint('test.lua', 2), /No control right/);
   await assert.rejects(client.stepScript(), /No control right/);

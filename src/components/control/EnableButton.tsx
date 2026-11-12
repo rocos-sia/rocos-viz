@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Button, Tooltip, message } from 'antd';
 import { ThunderboltFilled } from '@ant-design/icons';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { useT } from '@/i18n/useT';
 
@@ -9,7 +9,7 @@ export function EnableButton({ iconOnly = false, disabled = false }: { iconOnly?
   const t = useT();
   const isConnected = useConnectionStore((s) => s.isConnected);
   const isEnabled = useConnectionStore((s) => s.isRobotEnabled);
-  const controlToken = useConnectionStore((s) => s.controlToken);
+  const controlToken = useConnectionStore(selectWriteToken);
   const setEnabled = useConnectionStore((s) => s.setEnabled);
   const { host, port } = useConnectionStore.getState();
 

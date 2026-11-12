@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { toolPoseFromValues, toolPoseValues } from '@/core/ToolPose';
 import type { NamedToolFrame, Pose, ToolFrameList } from '@/core/types';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useToolCalibrationStore } from '@/stores/toolCalibrationStore';
 import { useUnits } from '@/stores/unitStore';
@@ -20,7 +20,8 @@ const validName = (value: string) => /^[A-Za-z0-9_.-]{1,64}$/.test(value);
 export function ToolManager() {
   const t = useT();
   const units = useUnits();
-  const { host, port, isConnected, controlToken } = useConnectionStore();
+  const { host, port, isConnected } = useConnectionStore();
+  const controlToken = useConnectionStore(selectWriteToken);
   const robot = useRobotStateStore((s) => s.robotState);
   const { name, session, tolerance } = useToolCalibrationStore();
   const client = useMemo(() => new RobotApiClient(host, port), [host, port]);

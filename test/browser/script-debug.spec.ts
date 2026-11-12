@@ -65,7 +65,7 @@ test('first visit loads controller scripts without control rights and preserves 
   const scripts = ['hello_world.lua', 'examples/机器人状态.lua'];
   const fixture = await setup(page, 'zh', { scripts, gate, controlToken: null });
   await expect(page.locator('.teach-file-list')).toHaveAttribute('aria-busy', 'true');
-  await expect(page.getByRole('status')).toContainText('正在加载控制器脚本');
+  await expect(page.getByRole('main').getByRole('status')).toContainText('正在加载控制器脚本');
   release();
   await expect(page.locator('.teach-file-list button')).toHaveText(scripts);
   await expect(page.locator('.cm-content')).toContainText('-- Debug test');

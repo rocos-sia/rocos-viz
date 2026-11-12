@@ -6,7 +6,7 @@ import { CopyOutlined } from '@ant-design/icons';
 import { useUnitStore } from '@/stores/unitStore';
 import { useRobotStateStore } from '@/stores/robotStateStore';
 import { useControlStore } from '@/stores/controlStore';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { selectWriteToken, useConnectionStore } from '@/stores/connectionStore';
 import { useCompactScreen } from '@/hooks/useCompactScreen';
 import { RobotApiClient } from '@/core/RobotApiClient';
 import { FRAME, jointMotionParams, cartesianMotionParams } from '@/core/constants';
@@ -23,7 +23,7 @@ export function MotionCommandPanel() {
   const isMM = useUnitStore((s) => s.isMM);
   const connected = useConnectionStore((s) => s.isConnected);
   const enabled = useConnectionStore((s) => s.isRobotEnabled);
-  const token = useConnectionStore((s) => s.controlToken);
+  const token = useConnectionStore(selectWriteToken);
   const currentFrame = useControlStore((s) => s.currentFrame);
   const liveState = useRobotStateStore((s) => s.robotState);
   const simulation = useMotionPreviewStore(s => s.mode === 'simulation');
