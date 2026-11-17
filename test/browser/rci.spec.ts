@@ -142,3 +142,64 @@ test('entering RCI is disabled outside STOPPED', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'RCI 开关' })).toBeDisabled();
   expect(mock.calls).not.toContain('/api/robot/rci/enable');
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`RCI colors the entire header in ${theme} theme`, async ({ page }) => {
+    const mock = await controller(page);
+    await page.evaluate(async themeMode => {
+      const path = '/src/stores/uiStore.ts';
+      const { useUIStore } = await import(path);
+      useUIStore.setState({ themeMode });
+    }, theme);
+    const header = page.locator('.teach-topbar');
+    const colors = theme === 'light'
+      ? ['rgb(229, 231, 235)', 'rgb(220, 252, 231)', 'rgb(254, 226, 226)']
+      : ['rgb(48, 52, 59)', 'rgb(24, 61, 50)', 'rgb(73, 39, 44)'];
+
+    for (const [index, state] of ['off', 'active', 'error'].entries()) {
+      await page.setViewportSize({ width: 1762, height: 1000 });
+      if (state === 'active') await page.getByRole('button', { name: 'RCI 开关' }).click();
+      if (state === 'error') mock.fault();
+      await expect(header).toHaveCSS('background-color', colors[index]);
+      if (state === 'active') {
+        await expect(page.getByTestId('rci-status')).toContainText('只读监控');
+        await expect(page.locator('.ant-message-notice')).toBeVisible();
+      }
+      await expect(page.locator('.ant-message-notice')).toHaveCount(0);
+      await expect(page.getByTestId('rci-status')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(page.getByTestId('rci-status')).toHaveCSS('border-top-width', '0px');
+      for (const width of [1762, 1440, 768, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.evaluate(async width => {
+          const path = '/src/stores/uiStore.ts';
+          const { useUIStore } = await import(path);
+          useUIStore.setState({ sidebarCollapsed: width < 1200 });
+        }, width);
+        const metrics = await header.evaluate(element => {
+          const luminance = (color: string) => {
+            const rgb = color.match(/\d+/g)!.slice(0, 3).map(value => {
+              const channel = Number(value) / 255;
+              return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            });
+            return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+          };
+          const background = luminance(getComputedStyle(element).backgroundColor);
+          const contrasts = [...element.querySelectorAll('small, strong, .rci-status-bar')].map(label => {
+            const foreground = luminance(getComputedStyle(label).color);
+            return (Math.max(background, foreground) + .05) / (Math.min(background, foreground) + .05);
+          });
+          return { contrast: Math.min(...contrasts), overflow: element.scrollWidth - element.clientWidth };
+        });
+        expect(metrics.contrast).toBeGreaterThanOrEqual(4.5);
+        expect(metrics.overflow).toBeLessThanOrEqual(1);
+        await header.screenshot({ path: `test-results/rci-topbar-${theme}-${state}-${width}.png` });
+      }
+    }
+    await page.evaluate(async () => {
+      const path = '/src/stores/connectionStore.ts';
+      const { useConnectionStore } = await import(path);
+      useConnectionStore.setState({ isConnected: false, rci: null });
+    });
+    await expect(header).toHaveCSS('background-color', colors[0]);
+  });
+}

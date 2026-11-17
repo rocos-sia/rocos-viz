@@ -4,10 +4,10 @@
   --teach-card-padding: 24px;
   --teach-card-header-padding-y: 16px;
   --teach-nav: #192b45;
-  --teach-topbar-bg: #e8eef6;
+  --teach-topbar-bg: #e5e7eb;
   --teach-topbar-text: #243b53;
   --teach-topbar-muted: #52657d;
-  --teach-topbar-border: #c5d1df;
+  --teach-topbar-border: #c4c9d1;
   --teach-topbar-success: #166534;
   --teach-primary: #2563eb;
   --teach-selected: #eff6ff;
@@ -28,10 +28,10 @@
   --teach-shadow: 0 2px 8px rgb(25 43 69 / 4%);
 }
 [data-theme='dark'] {
-  --teach-topbar-bg: #2b405c;
+  --teach-topbar-bg: #30343b;
   --teach-topbar-text: #f1f5f9;
   --teach-topbar-muted: #c4d2e5;
-  --teach-topbar-border: #50647e;
+  --teach-topbar-border: #565d69;
   --teach-topbar-success: #86efac;
   --teach-selected: #203551;
   --teach-workspace: #111b2a;
@@ -744,15 +744,36 @@ small { font-size: var(--font-caption); }
   .is-simulation .teach-motion-column { flex: none; min-height: 780px; }
 }
 
-/* RCI 模式与故障状态跨页面显示，颜色同时配合明确文字。 */
-.rci-status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; margin-bottom: 12px; border: 1px solid var(--teach-border); border-radius: 6px; background: var(--teach-card); color: var(--teach-muted); font-size: var(--font-caption); }
-.rci-status-bar.is-active { background: var(--teach-success-bg); color: var(--teach-success); border-color: var(--teach-success); }
-.rci-status-bar.is-error { color: var(--teach-danger); border-color: var(--teach-danger); background: var(--teach-danger-bg); }
+/* RCI 状态融入整个顶部背景，文字继续说明待命、控制中与故障。 */
+.rci-status-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--teach-topbar-text); font-size: var(--font-caption); font-weight: 500; }
+.teach-topbar:has(> .rci-status-bar.is-active) {
+  --teach-topbar-bg: #dcfce7;
+  --teach-topbar-text: #14532d;
+  --teach-topbar-muted: #365944;
+  --teach-topbar-border: #acd4b8;
+}
+.teach-topbar:has(> .rci-status-bar.is-error) {
+  --teach-topbar-bg: #fee2e2;
+  --teach-topbar-text: #7f1d1d;
+  --teach-topbar-muted: #803737;
+  --teach-topbar-border: #e7b8b8;
+}
+[data-theme='dark'] .teach-topbar:has(> .rci-status-bar.is-active) {
+  --teach-topbar-bg: #183d32;
+  --teach-topbar-text: #ecfdf5;
+  --teach-topbar-muted: #b1d3bc;
+  --teach-topbar-border: #426c55;
+}
+[data-theme='dark'] .teach-topbar:has(> .rci-status-bar.is-error) {
+  --teach-topbar-bg: #49272c;
+  --teach-topbar-text: #fff1f2;
+  --teach-topbar-muted: #e9bdc3;
+  --teach-topbar-border: #80535c;
+}
 .teach-shell .rci-switch.is-active { color: var(--teach-success); background: var(--teach-success-bg); border-color: var(--teach-success); }
 
 .teach-topbar { display: block; }
 .teach-topbar-row { display: flex; align-items: center; flex-wrap: inherit; gap: inherit; min-width: 0; }
-.teach-topbar .rci-status-bar { margin: 8px 0 0; padding: 4px 12px; }
 @media (max-height: 500px) {
   .teach-content { overflow: auto; }
   .teach-teaching { min-height: 180px; }
