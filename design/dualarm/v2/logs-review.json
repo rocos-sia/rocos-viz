@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "source": "Explicitly labelled synthetic test data served over local HTTP/SSE",
+  "checks": [
+    "single process-wide subscription across navigation",
+    "scope/level/search filters",
+    "deduplication",
+    "gap notification",
+    "native reconnect Last-Event-ID",
+    "file preview and download",
+    "disconnect aborts stale history",
+    "keyboard speed sliders",
+    "no page overflow at 1440/768/390",
+    "GET only, no credentials or cookies",
+    "Chinese and English log controls",
+    "invalid endpoint fails without persisting embedded credentials"
+  ],
+  "errors": []
+}

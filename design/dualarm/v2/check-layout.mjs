@@ -1,0 +1,70 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const page=await browser.newPage({viewport:{width:1600,height:1000}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const checks=[];
+try {
+  await page.goto('http://127.0.0.1:5186');
+  await page.getByText('实际 URDF · 演示关节姿态',{exact:true}).waitFor();
+  await page.locator('.pose-value').first().filter({hasText:/\d/}).waitFor();
+  const left=page.locator('tr[data-arm=left]'),right=page.locator('tr[data-arm=right]');
+  const leftBefore=await left.locator('.pose-value').allTextContents(),rightBefore=await right.locator('.pose-value').allTextContents();
+  assert.equal(leftBefore.length,6);assert.equal(rightBefore.length,6);
+  const button=page.getByRole('button',{name:'左臂 J1 正向点动',exact:true});
+  await button.focus();await page.keyboard.down('Enter');
+  await page.waitForFunction(before=>document.querySelector('tr[data-arm=left] .pose-value').textContent!==before,leftBefore[0]);
+  await page.keyboard.up('Enter');
+  assert.notDeepEqual(await left.locator('.pose-value').allTextContents(),leftBefore);
+  assert.deepEqual(await right.locator('.pose-value').allTextContents(),rightBefore);
+  assert.match(await page.locator('.arm-summary.left .machine-state').innerText(),/STOPPED/);checks.push('URDF FK follows left joint jog; right pose stays unchanged; state stops on release');
+  await page.getByRole('combobox',{name:'左臂反馈坐标系'}).selectOption('100');
+  const tcp=await left.locator('.pose-value').allTextContents();assert.notDeepEqual(tcp,leftBefore);
+  await page.getByRole('combobox',{name:'左臂反馈坐标系'}).selectOption('300');
+  assert.deepEqual((await left.locator('.pose-value').allTextContents()).slice(0,3),['400.000','200.000','0.000']);
+  await page.getByRole('combobox',{name:'反馈长度单位'}).selectOption('m');
+  assert.deepEqual((await left.locator('.pose-value').allTextContents()).slice(0,3),['0.400','0.200','0.000']);
+  await page.getByRole('combobox',{name:'反馈角度单位'}).selectOption('rad');
+  assert.match(await page.locator('.jog-heading').innerText(),/rad/);
+  await page.getByRole('combobox',{name:'反馈长度单位'}).selectOption('mm');await page.getByRole('combobox',{name:'反馈角度单位'}).selectOption('deg');
+  await page.getByRole('combobox',{name:'左臂反馈坐标系'}).selectOption('200');checks.push('Independent flange/TCP/object selectors and shared single-arm unit preferences');
+  await page.locator('.scene-options summary').click();
+  for(const name of ['关节坐标系','关节正方向','透明模型','TCP 轨迹','工具 TCP','工件坐标系'])await page.getByRole('checkbox',{name,exact:true}).check();
+  await page.getByRole('combobox',{name:'坐标轴显示范围'}).selectOption('right');
+  await page.waitForFunction(()=>[...document.querySelectorAll('.coordinate-label')].filter(e=>!e.hidden).every(e=>!e.textContent.startsWith('L ·')));
+  assert.ok(await page.locator('.coordinate-label:not([hidden])').filter({hasText:'R ·'}).count());
+  await page.screenshot({path:'design/dualarm/v2/scene-axes.jpg',fullPage:true});
+  await page.getByRole('button',{name:'清除轨迹',exact:true}).click();
+  for(const name of ['关节坐标系','关节正方向','透明模型','TCP 轨迹','工具 TCP','工件坐标系'])await page.getByRole('checkbox',{name,exact:true}).uncheck();
+  await page.getByRole('combobox',{name:'坐标轴显示范围'}).selectOption('both');await page.locator('.scene-options summary').click();
+  checks.push('Coordinate/frame/axis/transparent/trajectory switches and per-arm scope work');
+  await page.getByRole('button',{name:'右臂管理工具',exact:true}).click();assert.match(await page.locator('.tool-list h2').innerText(),/右臂工具/);
+  await page.getByRole('button',{name:'手动示教',exact:true}).click();
+  await page.getByRole('button',{name:'左臂管理工具',exact:true}).click();assert.match(await page.locator('.tool-list h2').innerText(),/左臂工具/);
+  await page.getByRole('button',{name:'手动示教',exact:true}).click();checks.push('Top module tool management selects the correct arm');
+  await page.locator('.scenario select').selectOption('offline');assert.deepEqual(await left.locator('.pose-value').allTextContents(),Array(6).fill('—'));
+  assert.match(await page.locator('.arm-summary.left .machine-state').innerText(),/—/);checks.push('Stale arm hides pose and state; other arm data retained');
+  await page.locator('.scenario select').selectOption('normal');
+  // Clear the reset notice to capture the default layout.
+  await page.locator('.arm-summary.left .arm-select').click();
+  await page.getByRole('button',{name:'全屏',exact:true}).click();
+  await page.waitForFunction(()=>!!document.fullscreenElement);
+  await page.getByRole('button',{name:'全屏',exact:true}).click();
+  await page.waitForFunction(()=>!document.fullscreenElement);
+  for(const name of ['正视','侧视','俯视','复位视角'])await page.getByRole('button',{name,exact:true}).click();
+  await page.setViewportSize({width:1440,height:900});
+  const extent=await page.evaluate(()=>({row:document.querySelector('.jog-row:last-child').getBoundingClientRect().bottom,panel:document.querySelector('.control-panel').getBoundingClientRect().bottom}));
+  assert.ok(extent.row<=extent.panel,'All seven jog rows fit at 1440 × 900');
+  checks.push('Full screen, camera presets and all seven jog rows at 1440 × 900');
+  const metrics=[];
+  for(const width of [1600,1440,768,390,375]) {
+    await page.setViewportSize({width,height:1000});await page.waitForTimeout(500);
+    const metric=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,scene:document.querySelector('.scene-panel').getBoundingClientRect().toJSON(),feedback:document.querySelector('.compact-feedback').getBoundingClientRect().toJSON(),strip:document.querySelector('.arm-strip').getBoundingClientRect().toJSON()}));
+    assert.equal(metric.width,metric.scroll,`overflow at ${width}`);if(width>=1440){assert.ok(metric.scene.width>800);assert.ok(metric.feedback.height<170);assert.ok(metric.strip.y<15);}
+    metrics.push(metric);await page.screenshot({path:`design/dualarm/v2/layout-${width}.png`,fullPage:true});
+    if(width===1600)await page.screenshot({path:'design/dualarm/v2/overview.jpg',fullPage:true});
+  }
+  assert.deepEqual(errors,[]);checks.push('Desktop/tablet/phone have no page overflow, full-width compact feedback, enlarged scene');
+  fs.writeFileSync('design/dualarm/v2/layout-review.json',JSON.stringify({checks,metrics,errors},null,2));console.log(JSON.stringify({checks,errors},null,2));
+}finally{await browser.close();}

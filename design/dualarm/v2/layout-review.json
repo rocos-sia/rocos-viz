@@ -1,0 +1,184 @@
+{
+  "checks": [
+    "URDF FK follows left joint jog; right pose stays unchanged; state stops on release",
+    "Independent flange/TCP/object selectors and shared single-arm unit preferences",
+    "Coordinate/frame/axis/transparent/trajectory switches and per-arm scope work",
+    "Top module tool management selects the correct arm",
+    "Stale arm hides pose and state; other arm data retained",
+    "Full screen, camera presets and all seven jog rows at 1440 × 900",
+    "Desktop/tablet/phone have no page overflow, full-width compact feedback, enlarged scene"
+  ],
+  "metrics": [
+    {
+      "width": 1600,
+      "scroll": 1600,
+      "scene": {
+        "x": 160,
+        "y": 150,
+        "width": 1072,
+        "height": 650,
+        "top": 150,
+        "right": 1232,
+        "bottom": 800,
+        "left": 160
+      },
+      "feedback": {
+        "x": 160,
+        "y": 812,
+        "width": 1428,
+        "height": 155,
+        "top": 812,
+        "right": 1588,
+        "bottom": 967,
+        "left": 160
+      },
+      "strip": {
+        "x": 160,
+        "y": 10,
+        "width": 1428,
+        "height": 86,
+        "top": 10,
+        "right": 1588,
+        "bottom": 96,
+        "left": 160
+      }
+    },
+    {
+      "width": 1440,
+      "scroll": 1440,
+      "scene": {
+        "x": 160,
+        "y": 150,
+        "width": 936,
+        "height": 650,
+        "top": 150,
+        "right": 1096,
+        "bottom": 800,
+        "left": 160
+      },
+      "feedback": {
+        "x": 160,
+        "y": 812,
+        "width": 1268,
+        "height": 155,
+        "top": 812,
+        "right": 1428,
+        "bottom": 967,
+        "left": 160
+      },
+      "strip": {
+        "x": 160,
+        "y": 10,
+        "width": 1268,
+        "height": 86,
+        "top": 10,
+        "right": 1428,
+        "bottom": 96,
+        "left": 160
+      }
+    },
+    {
+      "width": 768,
+      "scroll": 768,
+      "scene": {
+        "x": 10,
+        "y": 176,
+        "width": 446,
+        "height": 600,
+        "top": 176,
+        "right": 456,
+        "bottom": 776,
+        "left": 10
+      },
+      "feedback": {
+        "x": 10,
+        "y": 788,
+        "width": 748,
+        "height": 157,
+        "top": 788,
+        "right": 758,
+        "bottom": 945,
+        "left": 10
+      },
+      "strip": {
+        "x": 10,
+        "y": 8,
+        "width": 748,
+        "height": 114,
+        "top": 8,
+        "right": 758,
+        "bottom": 122,
+        "left": 10
+      }
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "scene": {
+        "x": 8,
+        "y": 279,
+        "width": 374,
+        "height": 370,
+        "top": 279,
+        "right": 382,
+        "bottom": 649,
+        "left": 8
+      },
+      "feedback": {
+        "x": 8,
+        "y": 1423.1875,
+        "width": 374,
+        "height": 183,
+        "top": 1423.1875,
+        "right": 382,
+        "bottom": 1606.1875,
+        "left": 8
+      },
+      "strip": {
+        "x": 8,
+        "y": 8,
+        "width": 374,
+        "height": 179,
+        "top": 8,
+        "right": 382,
+        "bottom": 187,
+        "left": 8
+      }
+    },
+    {
+      "width": 375,
+      "scroll": 375,
+      "scene": {
+        "x": 8,
+        "y": 279,
+        "width": 359,
+        "height": 370,
+        "top": 279,
+        "right": 367,
+        "bottom": 649,
+        "left": 8
+      },
+      "feedback": {
+        "x": 8,
+        "y": 1423.1875,
+        "width": 359,
+        "height": 183,
+        "top": 1423.1875,
+        "right": 367,
+        "bottom": 1606.1875,
+        "left": 8
+      },
+      "strip": {
+        "x": 8,
+        "y": 8,
+        "width": 359,
+        "height": 179,
+        "top": 8,
+        "right": 367,
+        "bottom": 187,
+        "left": 8
+      }
+    }
+  ],
+  "errors": []
+}

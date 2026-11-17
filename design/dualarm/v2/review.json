@@ -1,0 +1,39 @@
+{
+  "checks": [
+    "Real dual-arm URDF and mesh resources load",
+    "Keyboard hold/release jog changes selected arm then stops",
+    "Independent concurrent MoveJ; left stop leaves right running",
+    "Package six-point workflow: capture, solve, save without implicit activation, explicit activation",
+    "Recapture invalidates old solution",
+    "Lease change invalidates writable session; P1 starts new session",
+    "Arm calibration samples isolated",
+    "Empty tool state",
+    "Full dualarm URDF download and 15 mesh links",
+    "Stale feedback locks motion",
+    "Responsive layouts have no horizontal page overflow at 1440/768/390/375",
+    "No browser errors or controller API requests"
+  ],
+  "metrics": [
+    {
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 768,
+      "scroll": 768
+    },
+    {
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "width": 375,
+      "scroll": 375
+    }
+  ],
+  "errors": [],
+  "scope": "Local interactive design only; no backend or calibration computation",
+  "style": "framed-sheet",
+  "seed": 1578383472,
+  "redraws": 0
+}

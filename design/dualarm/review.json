@@ -1,0 +1,111 @@
+{
+  "metrics": [
+    {
+      "layout": "parallel",
+      "width": 1440,
+      "scroll": 1440,
+      "height": 960
+    },
+    {
+      "layout": "focus",
+      "width": 1440,
+      "scroll": 1440,
+      "height": 960
+    },
+    {
+      "layout": "parallel",
+      "width": 1024,
+      "scroll": 1024,
+      "height": 1010
+    },
+    {
+      "layout": "focus",
+      "width": 1024,
+      "scroll": 1024,
+      "height": 1010
+    },
+    {
+      "layout": "parallel",
+      "width": 768,
+      "scroll": 768,
+      "height": 1450
+    },
+    {
+      "layout": "focus",
+      "width": 768,
+      "scroll": 768,
+      "height": 1450
+    },
+    {
+      "layout": "parallel",
+      "width": 390,
+      "scroll": 390,
+      "height": 1700
+    },
+    {
+      "layout": "focus",
+      "width": 390,
+      "scroll": 390,
+      "height": 1700
+    },
+    {
+      "layout": "parallel",
+      "width": 320,
+      "scroll": 320,
+      "height": 1900
+    },
+    {
+      "layout": "focus",
+      "width": 320,
+      "scroll": 320,
+      "height": 1900
+    }
+  ],
+  "errors": [],
+  "checks": [
+    "concurrent local motion",
+    "independent stop",
+    "pause/resume",
+    "lease isolation",
+    "invalid target",
+    "preserved drafts",
+    "model dialog",
+    "responsive widths",
+    "dark appearance"
+  ],
+  "purpose": "双臂上位机交互预案，全部为本地示例，未修改生产入口或控制器。",
+  "style": "framed-sheet",
+  "seed": 1578383472,
+  "redraws": 0,
+  "page": "https://chatgpt.com/space/page_27da4bda61508191aab36c7f62ca6a2d",
+  "questions": {
+    "parallel": "能否同时看清两臂状态并分别执行运动？",
+    "focus": "能否集中编辑一臂而持续观察另一臂？"
+  },
+  "critique": {
+    "composition": "两套关节编辑器固定对应两臂，共用基座示意明确工作站关系；记录并入场景下方。",
+    "edges": "桌面采用对称编辑列；聚焦方案扩大共用场景；变体使用相同最小高度，窄屏允许留白以保持切换位置。",
+    "color": "保留 ROCOS 蓝，右臂用青色，状态通过文字和颜色共同表达。",
+    "numbers": "每臂七行反馈与目标，状态条和场景状态来自同一臂对象；示例数值不是实际机器人反馈。",
+    "missing": "失联显示破折号，未知停止结果保留提示。",
+    "labels": "L/左臂、R/右臂与对应运动链保持一致。",
+    "mobile": "导航折为顶部，编辑器明确选臂，两臂停止入口同时保留；生产版应沿用原小屏运动限制。"
+  },
+  "allowed_warnings": [
+    "品牌蓝 #2563eb 来自现有项目，不另造品牌色。"
+  ],
+  "limitations": [
+    "共用场景为结构示意，未加载真实 URDF 或运动学。",
+    "只验证预案交互，不等于真实 API 或机器人联调。",
+    "双臂模型下载接口尚缺，实际接入需配置模型包或增加接口。"
+  ],
+  "final_inspector": {
+    "fail": 0,
+    "warn": 0,
+    "widths": [
+      1440,
+      768,
+      390
+    ]
+  }
+}

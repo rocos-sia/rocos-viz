@@ -1,0 +1,64 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const browser = await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const page = await browser.newPage({viewport:{width:1440,height:1000}});
+const errors=[], requests=[], checks=[];
+page.on('pageerror', e=>errors.push(e.message)); page.on('request',r=>requests.push(r.url()));
+const mark = text => checks.push(text);
+try {
+  await page.goto('http://127.0.0.1:5186');
+  await page.getByText('实际 URDF · 演示关节姿态').waitFor();
+  await page.screenshot({path:'design/dualarm/v2/overview-1440.png',fullPage:true});
+  await page.screenshot({path:'design/dualarm/v2/overview.jpg',fullPage:true});
+  mark('Real dual-arm URDF and mesh resources load');
+  const minus=page.getByRole('button',{name:'左臂 J1 正向点动',exact:true});
+  const rightBefore=await page.locator('.joint-matrix').innerText();
+  await minus.focus(); await page.keyboard.down('Enter');
+  try { await page.waitForFunction(before => document.querySelector('.joint-matrix').innerText !== before, rightBefore, {timeout:5000}); } finally { await page.keyboard.up('Enter'); }
+  assert.notEqual(await page.locator('.joint-matrix').innerText(),rightBefore); assert.equal(await page.getByText('点动中',{exact:true}).count(),0); mark('Keyboard hold/release jog changes selected arm then stops');
+  await page.getByRole('button',{name:'精确运动',exact:true}).click();
+  await page.getByRole('spinbutton',{name:'J1',exact:true}).fill('30'); await page.getByRole('button',{name:'下发左臂 MOVEJ',exact:true}).click();
+  await page.locator('.arm-summary.right').getByRole('button',{name:'申请控制权',exact:true}).click();
+  await page.locator('.arm-summary.right').getByRole('button',{name:'使能',exact:true}).click();
+  await page.locator('.segmented').getByRole('button',{name:'右臂',exact:true}).click();
+  await page.getByRole('spinbutton',{name:'J1',exact:true}).fill('-30'); await page.getByRole('button',{name:'下发右臂 MOVEJ',exact:true}).click();
+  assert.equal(await page.locator('.machine-state b').filter({hasText:'RUNNING'}).count(),2);
+  await page.locator('.arm-summary.left').getByRole('button',{name:'停止左臂',exact:true}).click();
+  assert.match(await page.locator('.arm-summary.right').innerText(),/RUNNING/); mark('Independent concurrent MoveJ; left stop leaves right running');
+  await page.locator('.arm-summary.right').getByRole('button',{name:'停止右臂',exact:true}).click();
+  await page.getByRole('button',{name:'工具与标定',exact:true}).click();
+  await page.getByRole('combobox',{name:'标定工具'}).selectOption('probe_package');
+  assert.equal(await page.getByRole('button',{name:'计算 TCP',exact:true}).isDisabled(),true);
+  for(let i=0;i<6;i++) await page.locator('.sample-row').nth(i).getByRole('button').click();
+  await page.getByRole('button',{name:'计算 TCP',exact:true}).click();
+  await page.getByRole('button',{name:'保存到右臂',exact:true}).click();
+  assert.match(await page.locator('.tool-details').innerText(),/TCP_01/);
+  await page.getByRole('button',{name:'激活此工具',exact:true}).click(); assert.match(await page.locator('.tool-details').innerText(),/probe_package/);
+  await page.screenshot({path:'design/dualarm/v2/calibration-1440.png',fullPage:true});
+  mark('Package six-point workflow: capture, solve, save without implicit activation, explicit activation');
+  await page.locator('.sample-row').nth(2).getByRole('button').click(); assert.equal(await page.getByRole('button',{name:'保存到右臂',exact:true}).isDisabled(),true); mark('Recapture invalidates old solution');
+  await page.locator('.scenario select').selectOption('expired');
+  await page.locator('.arm-summary.right').getByRole('button',{name:'申请控制权',exact:true}).click();
+  assert.match(await page.locator('.error-note').innerText(),/原会话只读/);
+  assert.equal(await page.locator('.sample-row').nth(1).getByRole('button').isDisabled(),true);
+  await page.locator('.sample-row').nth(0).getByRole('button').click(); assert.equal(await page.locator('.sample-row').getByText('已采集',{exact:true}).count(),1); mark('Lease change invalidates writable session; P1 starts new session');
+  await page.locator('.arm-summary.left .arm-select').click(); assert.equal(await page.locator('.sample-row').getByText('已采集',{exact:true}).count(),0); mark('Arm calibration samples isolated');
+  await page.locator('.scenario select').selectOption('empty'); assert.match(await page.locator('.tool-list').innerText(),/尚无工具/); mark('Empty tool state');
+  await page.locator('.scenario select').selectOption('normal');
+  await page.getByRole('button',{name:'模型资源',exact:true}).click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link',{name:'下载双臂 URDF'}).click()]); assert.equal(download.suggestedFilename(),'dualarm.urdf'); assert.equal(await page.locator('.mesh-links a').count(),15); mark('Full dualarm URDF download and 15 mesh links');
+  await page.getByRole('button',{name:'手动示教',exact:true}).click();
+  await page.locator('.scenario select').selectOption('offline'); assert.equal(await page.getByRole('button',{name:'下发左臂 MOVEJ',exact:true}).isDisabled(),true); mark('Stale feedback locks motion');
+  await page.locator('.scenario select').selectOption('normal'); await page.getByRole('button',{name:'点动控制',exact:true}).click();
+  const metrics=[];
+  for(const width of [1440,768,390,375]) {
+    await page.setViewportSize({width,height:900}); await page.waitForTimeout(600);
+    const metric=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth})); assert.equal(metric.width,metric.scroll); metrics.push(metric);
+    await page.screenshot({path:`design/dualarm/v2/overview-${width}.png`,fullPage:true});
+  }
+  await page.emulateMedia({reducedMotion:'reduce'}); mark('Responsive layouts have no horizontal page overflow at 1440/768/390/375');
+  assert.deepEqual(errors,[]); assert.equal(requests.some(u=>/\/api\//.test(u)),false); mark('No browser errors or controller API requests');
+  fs.writeFileSync('design/dualarm/v2/review.json',JSON.stringify({checks,metrics,errors,scope:'Local interactive design only; no backend or calibration computation',style:'framed-sheet',seed:1578383472,redraws:0},null,2));
+  console.log(JSON.stringify({checks,metrics,errors},null,2));
+} finally { await browser.close(); }
