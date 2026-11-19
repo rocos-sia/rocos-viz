@@ -23,7 +23,7 @@ export default function LiveConfiguration({ side, arm, page, control, onNavigate
   const [calculatedTolerance, setCalculatedTolerance] = useState({});
   const configuration = arm.configuration, draft = drafts[side], tool = tools[side];
   const toolNames = Object.keys(configuration?.tools || {});
-  const writable = arm.online && arm.owned && !arm.pending && !arm.stopping && !arm.motionLocked && !arm.snapshot?.motion_busy && ['IDLE', 'STOPPED'].includes(arm.state);
+  const writable = arm.online && arm.owned && !arm.pending && !arm.calibrationRestoring && !arm.stopping && !arm.motionLocked && !arm.snapshot?.motion_busy && ['IDLE', 'STOPPED'].includes(arm.state);
   const calibration = arm.calibration?.name === tool ? arm.calibration : null;
   const tolerance = tolerances[side], payload = payloads[side] || ['0', '0', '0', '0'];
   const result = calibration?.result && calculatedTolerance[side] === tolerance ? calibration.result : null;
@@ -38,6 +38,13 @@ export default function LiveConfiguration({ side, arm, page, control, onNavigate
     return data;
   };
   useEffect(() => {
+    const preferences = arm.calibrationPreferences;
+    if (!preferences) return;
+    setTools(previous => ({ ...previous, [side]: preferences.tool }));
+    setTolerances(previous => ({ ...previous, [side]: preferences.tolerance }));
+    setCalculatedTolerance(previous => ({ ...previous, [side]: preferences.calculatedTolerance ?? null }));
+  }, [side, arm.calibrationPreferences]);
+  useEffect(() => {
     if (!configuration) return;
     if (!toolNames.includes(tools[side])) setTools(previous => ({ ...previous, [side]: toolNames[0] || '' }));
     if (!payloads[side]) {
@@ -51,11 +58,13 @@ export default function LiveConfiguration({ side, arm, page, control, onNavigate
   function selectTool(name) {
     setTools(previous => ({ ...previous, [side]: name }));
     control?.configuration.invalidate(side);
+    control?.configuration.remember(side, { tool: name, calculatedTolerance: null });
   }
   function changeTolerance(value) {
     setTolerances(previous => ({ ...previous, [side]: value }));
     setCalculatedTolerance(previous => ({ ...previous, [side]: null }));
     control?.onArm(side, { calibrationSaved: false });
+    control?.configuration.remember(side, { tolerance: value, calculatedTolerance: null });
   }
   async function capture(index, fresh = false) {
     if (!tool) return;
@@ -80,6 +89,7 @@ export default function LiveConfiguration({ side, arm, page, control, onNavigate
   return <div className="live-configuration">
     <div className="configuration-toolbar"><h2>{t(side === 'left' ? 'dual.left' : 'dual.right')} · {t(page === 'tools' ? 'dual.tools' : 'dual.frames')}</h2><button disabled={arm.configurationLoading} onClick={() => control?.configuration.refresh(side)}>{t('dual.refresh')}</button></div>
     {arm.configurationLoading && <p className="muted">{t('dual.loading')}</p>}
+    {arm.calibrationRestoring && <p className="inline-hint" role="status">{t('dual.restoringCalibration')}</p>}
     {arm.configurationError && <p role="alert" className="error-note">{arm.configurationError}</p>}
     {arm.error && <p className="error-note" role="alert">{arm.error.operation}: {arm.error.message} [{arm.error.code}]</p>}
     {!writable && <p className="inline-hint">{t(!arm.online ? 'dual.staleHint' : !arm.owned ? 'dual.acquireHint' : 'dual.runningHint')}</p>}
@@ -96,7 +106,7 @@ export default function LiveConfiguration({ side, arm, page, control, onNavigate
         <div className="button-row calculation-actions"><button disabled={!writable || !tool} onClick={() => capture(1, true)}>{t('dual.newSession')}</button><button className="primary" disabled={!writable || calibration?.captured !== 6} onClick={async () => {
           const value = Number(tolerance); if (!Number.isFinite(value) || value <= 0 || value > 50) { error(); return; }
           const data = await write('calibration/run', { session_id: calibration.session_id, max_error: value / 1000 });
-          if (data) setCalculatedTolerance(previous => ({ ...previous, [side]: tolerance }));
+          if (data) { setCalculatedTolerance(previous => ({ ...previous, [side]: tolerance })); control?.configuration.remember(side, { calculatedTolerance: tolerance }); }
         }}>{t('dual.calculate')}</button></div>
         <div className="result-panel"><div className="panel-title"><h3>TCP</h3><span className="state">{t(arm.calibrationSaved ? 'dual.saved' : 'dual.unsaved')}</span></div>{result ? <><div className="result-metrics">{[['RMS', result.metrics.rms_error * 1000, 'mm'], [t('dual.maxError'), result.metrics.max_error * 1000, 'mm'], ['Condition', result.metrics.condition_number, ''], ['X/Z', result.metrics.axis_angle_degrees, '°']].map(([label, value, unit]) => <div key={label}><span>{label}</span><b>{Number(value).toFixed(3)} <small>{unit}</small></b></div>)}</div><p>{poseValues(result.pose).slice(0, 3).map(value => Number(value).toFixed(3)).join(' / ')} mm</p><p className="muted small">qx/qy/qz/qw: {poseValues(result.pose).slice(3).map(value => Number(value).toFixed(6)).join(' / ')}</p></> : <p className="muted">{t('dual.noResult')}</p>}
           <div className="button-row"><button disabled={!writable || !result || arm.calibrationSaved} onClick={() => write('calibration/save', { session_id: calibration.session_id })}>{t('dual.saveCalibration')}</button><button disabled={!writable || !arm.calibrationSaved || arm.tool === tool} onClick={() => write('robot/active_tool_frame', { name: tool })}>{t('dual.activate')}</button></div></div>

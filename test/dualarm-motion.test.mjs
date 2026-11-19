@@ -5,14 +5,14 @@ import { DualArmControl } from '../src/dualarm/control/live.mjs';
 
 const names = Array.from({ length: 7 }, (_, index) => `J${index + 1}`);
 const pose = { position: { x: .1, y: .2, z: .3 }, orientation: { x: 0, y: 0, z: 0, w: 1 } };
-const state = (timestamp, position = 0, robot_state = 'STOPPED') => ({ timestamp, robot_state, is_enabled: true, motion_busy: robot_state === 'RUNNING', flange: pose, tcp: pose,
+const state = (timestamp, position = 0, robot_state = 'STOPPED') => ({ timestamp, state_seq:timestamp, instance_id:'test-app', motion_epoch:1, robot_state, is_enabled: true, motion_busy: robot_state === 'RUNNING', flange: pose, tcp: pose,
   joint_states: names.map(name => ({ name, position, velocity: 0 })) });
 const motion = () => ({ kind: 'movej', body: { joints: Array(7).fill(.1) }, phase: 'waiting', afterTimestamp: 1, acceptedAt: Date.now() });
 
 test('acceptance locks duplicate submissions per arm until post-acceptance feedback settles at target', async () => {
   const calls = [], client = new DualArmControl({ storage: null, fetcher: async path => { calls.push(path); return new Response(JSON.stringify({ success: true, data: {} })); } });
   try {
-    for (const side of ['left', 'right']) Object.assign(client.session(side), { token: side, verified: true, state: state(1), updated: Date.now(), definition: { joint_names: names } });
+    for (const side of ['left', 'right']) Object.assign(client.session(side), { token: side, verified: true, state: state(1), updated: client.clock(), instanceId:'test-app', epoch:1, protocol:1, definition: { joint_names: names } });
     const input = { target: Array(7).fill(.1 * 180 / Math.PI), velocity: .1, acceleration: .3, jerk: 5 };
     assert.equal(await client.move('left', 'movej', input), true);
     assert.equal(await client.move('left', 'movej', input), false);
@@ -21,7 +21,7 @@ test('acceptance locks duplicate submissions per arm until post-acceptance feedb
     const session = client.session('left');
     session.motion = advanceMotion(session.motion, state(1, .1), names);
     assert.equal(session.motion.phase, 'waiting');
-    for (let timestamp = 2; timestamp <= 4; timestamp++) session.motion = advanceMotion(session.motion, state(timestamp, .1), names);
+    for (let timestamp = 2; timestamp <= 4; timestamp++) session.motion = advanceMotion(session.motion, {...state(timestamp, .1), command:{command_id:session.motion.commandId,motion_epoch:1,status:'finished'}}, names);
     assert.equal(session.motion.phase, 'completed');
     assert.equal(motionLocked(session.motion), false);
     assert.equal(await client.move('left', 'movej', input), true);

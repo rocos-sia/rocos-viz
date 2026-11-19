@@ -27,21 +27,23 @@ try {
     const match = path.match(/^\/api\/arms\/(left|right)\/(.+)$/);
     if (!match) return route.abort();
     const [, side, operation] = match, arm = arms[side], state = arm.state;
+    const tracking = () => ({ instance_id: state.instance_id, motion_epoch: state.motion_epoch, state_seq: state.state_seq, command_protocol: 1, command: state.command });
     const body = request.method() === 'POST' ? request.postDataJSON() : null;
-    if (operation === 'control/acquire') { arm.owner = body.client_id; return reply({ token: side + '-fixture', has_owner: true, owner_client_id: arm.owner }); }
-    if (operation.startsWith('control/')) return reply({ has_owner: !!arm.owner, owner_client_id: arm.owner });
+    if (operation === 'control/acquire') { arm.owner = body.client_id; return reply({ ...tracking(), token: side + '-fixture', has_owner: true, owner_client_id: arm.owner }); }
+    if (operation.startsWith('control/')) return reply({ ...tracking(), has_owner: !!arm.owner, owner_client_id: arm.owner });
     if (operation === 'robot/state') {
       if (arm.offline) return route.fulfill({ status: 503, json: { success: false, code: 503, message: 'Fixture offline' } });
-      state.timestamp = Date.now() / 1000; state.is_enabled = true; state.robot_state = arm.override || 'STOPPED'; state.motion_busy = false;
+      state.timestamp = Date.now() / 1000; state.state_seq++; state.is_enabled = true; state.robot_state = arm.override || 'STOPPED'; state.motion_busy = false;
       state.joint_states.forEach(joint => { joint.velocity = 0; });
       if (arm.goal) {
         const elapsed = Date.now() - arm.goal.started;
         if (elapsed < 450) { state.robot_state = elapsed < 180 ? 'STARTING' : 'RUNNING'; state.motion_busy = true; }
-        else { if (arm.goal.body.joints) state.joint_states.forEach((joint, index) => { joint.position = arm.goal.body.joints[index]; }); if (arm.goal.body.pose) state[arm.goal.kind === 'movej_ik' ? 'flange' : 'tcp'] = arm.goal.body.pose; arm.goal = null; }
+        else { if (arm.goal.body.joints) state.joint_states.forEach((joint, index) => { joint.position = arm.goal.body.joints[index]; }); if (arm.goal.body.pose) state[arm.goal.kind === 'movej_ik' ? 'flange' : 'tcp'] = arm.goal.body.pose; state.command.status = 'finished'; arm.goal = null; }
       }
       return reply(state);
     }
     if (request.method() === 'GET') {
+      if (operation === 'robot/command_status') return reply(tracking());
       if (operation === 'robot/tool_frames') return reply({ names: Object.keys(arm.tools), active: state.active_tool_frame_name, file_path: `${side}.yaml` });
       if (operation === 'robot/object_frames') return reply({ names: Object.keys(arm.objects), active: state.active_object_frame_name });
       if (operation === 'robot/tool_frame') return reply(arm.tools[url.searchParams.get('name')]);
@@ -51,7 +53,8 @@ try {
       return reply({});
     }
     writes.push({ side, operation, body, token: request.headers()['x-rocos-control-token'] });
-    if (operation.startsWith('robot/move')) arm.goal = { started: Date.now(), body, kind: operation.split('/')[1] };
+    if (operation.startsWith('robot/move')) { arm.goal = { started: Date.now(), body, kind: operation.split('/')[1] }; state.command = { command_id: body.command_id, motion_epoch: body.motion_epoch, status: 'accepted' }; }
+    if (operation === 'robot/stop' || operation === 'robot/jog/stop') { state.motion_epoch++; arm.goal = null; if (state.command) state.command.status = 'stopped'; }
     if (operation === 'robot/tool_frame') arm.tools[body.name] = { name: body.name, frame: body.frame };
     if (operation === 'robot/object_frame') arm.objects[body.name] = { name: body.name, frame: body.frame };
     if (operation === 'robot/load_params') arm.load = { ...body, valid: true };
@@ -63,9 +66,9 @@ try {
       arm.calibration.samples[body.index - 1] = { timestamp: Date.now() / 1000, flange: pose() }; arm.calibration.result = null; arm.calibration.captured = arm.calibration.samples.filter(Boolean).length;
       return reply(arm.calibration);
     }
-    if (operation === 'calibration/run') { arm.calibration.result = { pose: pose(), metrics: { rms_error: .00001, max_error: .00002, condition_number: 12, axis_angle_degrees: 90 } }; return reply(arm.calibration); }
-    if (operation === 'calibration/save') { const tool = arm.tools[arm.calibration.name]; tool.frame = arm.calibration.result.pose; if (tool.package) arm.calibration.package_revision = ++tool.package.revision; return reply(null); }
-    return reply({});
+    if (operation === 'calibration/run') { arm.calibration.max_error = body.max_error; arm.calibration.saved = false; arm.calibration.result = { pose: pose(), metrics: { rms_error: .00001, max_error: .00002, condition_number: 12, axis_angle_degrees: 90 } }; return reply(arm.calibration); }
+    if (operation === 'calibration/save') { const tool = arm.tools[arm.calibration.name]; tool.frame = arm.calibration.result.pose; arm.calibration.saved = true; if (tool.package) arm.calibration.package_revision = ++tool.package.revision; return reply(null); }
+    return reply(tracking());
   });
   await page.goto(origin + '/?base=shoulder');
   await page.getByText('App 模型 · 实时关节姿态', { exact: true }).waitFor();

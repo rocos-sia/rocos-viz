@@ -3,6 +3,7 @@ import { advanceMotion, motionLocked } from './motion.mjs';
 import { ArmConfiguration } from './configuration.mjs';
 export const SIDES = ['left', 'right'];
 export const SESSION_KEY = 'rocos.dualarm.control.v1';
+export const monotonicNow = () => performance.now();
 const newClientId = () => `dualarm-viz-${crypto.randomUUID()}`;
 function tabStorage() {
   try { return globalThis.sessionStorage ?? null; } catch { return null; }
@@ -13,8 +14,13 @@ function restore(storage) {
     if (!value || value.version !== 1 || !/^dualarm-viz-[a-f0-9-]{36}$/.test(value.clientId)) return null;
     return { clientId: value.clientId, tokens: Object.fromEntries(SIDES.map(side => [side,
       typeof value.tokens?.[side] === 'string' && value.tokens[side].length <= 512 ? value.tokens[side] : '',
-    ])) };
+    ])), arms: value.arms && typeof value.arms === 'object' ? value.arms : {} };
   } catch { return null; }
+}
+function validCachedBody(motion) {
+  if (['movej', 'movel_fk'].includes(motion?.kind)) return Array.isArray(motion.body?.joints) && motion.body.joints.length === 7 && motion.body.joints.every(Number.isFinite);
+  const pose = motion?.body?.pose;
+  return !!pose && ['x', 'y', 'z'].every(axis => Number.isFinite(pose.position?.[axis])) && ['x', 'y', 'z', 'w'].every(axis => Number.isFinite(pose.orientation?.[axis])) && Math.hypot(...['x', 'y', 'z', 'w'].map(axis => pose.orientation[axis])) > 1e-9;
 }
 export class ApiFailure extends Error {
   constructor(message, code = 'NETWORK', requestId = '') {
@@ -45,13 +51,23 @@ export function motionRequest(kind, input) {
   return body;
 }
 export class DualArmControl {
-  constructor({ storage = tabStorage(), locks = globalThis.navigator?.locks, fetcher = (...args) => fetch(...args), onArm = () => {}, onError = () => {}, onModel = () => {}, onEvent = () => {} } = {}) {
+  constructor({ storage = tabStorage(), locks = globalThis.navigator?.locks, clock = monotonicNow, fetcher = (...args) => fetch(...args), onArm = () => {}, onError = () => {}, onModel = () => {}, onEvent = () => {} } = {}) {
     this.fetcher = fetcher; this.onArm = onArm; this.onError = onError;
     this.onModel = onModel; this.onEvent = onEvent;
     this.storage = storage; this.locks = locks;
+    this.clock = clock;
     const saved = restore(storage);
     this.clientId = saved?.clientId || newClientId();
-    this.sessions = Object.fromEntries(SIDES.map(side => [side, { token: saved?.tokens[side] || '', verified: false, state: null, updated: 0, held: null, stopping: null, pending: false }]));
+    this.sessions = Object.fromEntries(SIDES.map(side => {
+      const cached = saved?.tokens[side] ? saved?.arms?.[side] : null;
+      const instanceId = typeof cached?.instanceId === 'string' ? cached.instanceId : '';
+      const remembered = cached?.motion;
+      const motion = instanceId && validCachedBody(remembered) && /^[A-Za-z0-9_.:-]{1,128}$/.test(remembered?.commandId || '') && ['movej', 'movej_ik', 'movel', 'movel_fk'].includes(remembered.kind)
+        ? { ...remembered, phase: remembered.stopEpoch ? 'stopping' : 'unknown', afterSequence: 0, lastSequence: undefined, quiet: 0 } : null;
+      return [side, { token: saved?.tokens[side] || '', verified: false, state: null, updated: -Infinity, held: null, stopping: null, pending: false, instanceId, epoch: 0, protocol: 0, retiredInstances: new Set(), motion,
+        calibrationHandle: cached?.calibration && typeof cached.calibration.session_id === 'string' && typeof cached.calibration.name === 'string' ? cached.calibration : null,
+        calibrationPreferences: cached?.preferences && typeof cached.preferences.tool === 'string' && typeof cached.preferences.tolerance === 'string' ? cached.preferences : { tool: '', tolerance: '1' } }];
+    }));
     this.closed = false; this.timers = new Set();
     this.configuration = new ArmConfiguration(this);
   }
@@ -59,7 +75,13 @@ export class DualArmControl {
     try {
       if (!this.storage) throw new Error('Storage unavailable');
       this.storage.setItem(SESSION_KEY, JSON.stringify({ version: 1, clientId: this.clientId,
-        tokens: Object.fromEntries(SIDES.map(arm => [arm, this.sessions[arm].token])) }));
+        tokens: Object.fromEntries(SIDES.map(arm => [arm, this.sessions[arm].token])),
+        arms: Object.fromEntries(SIDES.map(arm => {
+          const session = this.sessions[arm], motion = session.motion;
+          return [arm, { instanceId: session.instanceId, preferences: session.calibrationPreferences,
+            calibration: session.calibrationHandle,
+            motion: motionLocked(motion) ? { commandId: motion.commandId, kind: motion.kind, body: motion.body, instanceId: motion.instanceId, epoch: motion.epoch, stopInstance: motion.stopInstance, stopEpoch: motion.stopEpoch, stopAfterSequence: motion.stopAfterSequence } : null }];
+        })) }));
     } catch {
       if (side && !this.storageWarning) {
         this.storageWarning = true;
@@ -69,6 +91,7 @@ export class DualArmControl {
   }
   forget(side) {
     const s = this.session(side); s.token = ''; s.verified = false;
+    s.protocol = 0;
     this.configuration.invalidate(side);
     this.persist(side); this.onArm(side, { owned: false, leaseChecking: false, owner: '', ownerExpires: 0 });
   }
@@ -86,13 +109,34 @@ export class DualArmControl {
       });
       if (claimed || this.closed) return;
       this.clientId = newClientId();
-      for (const side of SIDES) { this.sessions[side].token = ''; this.sessions[side].verified = false; }
+      for (const side of SIDES) { this.sessions[side].token = ''; this.sessions[side].verified = false; this.sessions[side].motion = null; this.configuration.invalidate(side); }
       this.persist();
     }
   }
   session(side) {
     if (!SIDES.includes(side)) throw new ApiFailure('无效臂名', 'INVALID_ARM');
     return this.sessions[side];
+  }
+  observeProtocol(side, data) {
+    const session = this.session(side);
+    if (!data?.instance_id || !Number.isSafeInteger(data.motion_epoch)) return false;
+    if (session.retiredInstances.has(data.instance_id)) return false;
+    if (session.instanceId && session.instanceId !== data.instance_id) {
+      session.retiredInstances.add(session.instanceId);
+      if (motionLocked(session.motion)) session.motion = { ...session.motion, phase: 'unknown', quiet: 0, stopEpoch: undefined, lastSequence: undefined };
+      this.forget(side);
+      session.epoch = 0;
+      this.error(side, 'App 会话', new ApiFailure('App 已重启；请重新获取控制权并确认停止。未保存的标定会话已失效。', 'APP_RESTARTED'));
+    }
+    session.instanceId = data.instance_id;
+    session.epoch = Math.max(session.epoch, data.motion_epoch);
+    if (Number.isInteger(data.command_protocol)) session.protocol = data.command_protocol;
+    return true;
+  }
+  fence(side) {
+    const session = this.session(side);
+    if (session.protocol !== 1 || !session.instanceId || !Number.isSafeInteger(session.epoch) || session.epoch < 1) throw new ApiFailure('App 尚未确认命令追踪协议，请等待控制权验证或更新双臂 App', 'PROTOCOL');
+    return { instance_id: session.instanceId, motion_epoch: session.epoch };
   }
   later(fn, delay) {
     if (this.closed) return;
@@ -139,11 +183,11 @@ export class DualArmControl {
     session.error = null;
     this.onEvent(side, `${operation} 已恢复`);
   }
-  fresh(side) { const s = this.session(side); return !!s.state && Date.now() - s.updated < 750; }
+  fresh(side) { const s = this.session(side), age = this.clock() - s.updated; return !!s.state && age >= 0 && age < 750; }
   async start() {
     await this.claimTab();
     if (this.closed) return;
-    for (const side of SIDES) this.onArm(side, { owned: false, leaseChecking: !!this.sessions[side].token });
+    for (const side of SIDES) this.onArm(side, { owned: false, leaseChecking: !!this.sessions[side].token, motion: this.sessions[side].motion, motionLocked: motionLocked(this.sessions[side].motion), calibrationPreferences: this.sessions[side].calibrationPreferences, calibrationRestoring: !!this.sessions[side].calibrationHandle });
     void this.discover();
     for (const side of SIDES) { void this.poll(side); void this.lease(side); }
     const stale = () => {
@@ -179,18 +223,24 @@ export class DualArmControl {
       const q = names.map(name => state.joint_states?.find(j => j.name === name)?.position);
       const validPose = p => p && ['x','y','z'].every(k => Number.isFinite(p.position?.[k])) && ['x','y','z','w'].every(k => Number.isFinite(p.orientation?.[k]));
       if (q.some(v => !Number.isFinite(v)) || !validPose(state.flange) || !validPose(state.tcp) || typeof state.robot_state !== 'string' || typeof state.is_enabled !== 'boolean') throw new ApiFailure('状态数据不完整，已锁定操作', 'INVALID_STATE');
-      if (!Number.isFinite(state.timestamp)) throw new ApiFailure('状态时间戳无效', 'INVALID_STATE');
-      if (state.timestamp !== s.lastTimestamp) { s.lastTimestamp = state.timestamp; s.timestampChanged = Date.now(); }
-      if (Date.now() - s.timestampChanged >= 750) throw new ApiFailure('App 状态时间戳已停止更新', 'STALE');
-      s.state = state; s.updated = Date.now(); s.readFailed = false;
+      if (!Number.isFinite(state.timestamp) || !Number.isSafeInteger(state.state_seq) || state.state_seq < 1 || !this.observeProtocol(side, state)) throw new ApiFailure('状态序号或 App 实例无效，请更新双臂 App', 'INVALID_STATE');
+      if (s.sequenceInstance !== state.instance_id) { s.sequenceInstance = state.instance_id; s.lastSequence = 0; }
+      if (state.state_seq < s.lastSequence) throw new ApiFailure('App 返回了乱序状态', 'INVALID_STATE');
+      if (state.state_seq > s.lastSequence) { s.lastSequence = state.state_seq; s.sequenceChanged = this.clock(); }
+      if (this.clock() - s.sequenceChanged >= 750) throw new ApiFailure('App 状态序号已停止更新', 'STALE');
+      s.state = state; s.updated = this.clock(); s.readFailed = false;
       this.recover(side, '读取状态');
-      s.motion = advanceMotion(s.motion, state, names);
+      const previousPhase = s.motion?.phase;
+      s.motion = advanceMotion(s.motion, state.command?.command_id === s.motion?.commandId ? state : { ...state, command: s.queriedCommand }, names);
+      if (s.motion?.phase !== previousPhase) this.persist(side);
       this.onArm(side, { online: true, enabled: state.is_enabled, state: state.robot_state, snapshot: state,
         motion: s.motion, motionLocked: motionLocked(s.motion),
         q: q.map(v => v * 180 / Math.PI), tool: state.active_tool_frame_name || '', object: state.active_object_frame_name || '',
         runtimeError: /ERROR|FAULT/.test(state.robot_state) ? `运行错误：${state.robot_state}；请查看本臂日志详情` : '',
         updated: s.updated });
       if (s.held && (!state.is_enabled || /ERROR|FAULT/.test(state.robot_state))) void this.stopJog(side);
+      if (s.verified && s.calibrationHandle && !s.calibration) void this.configuration.restore(side);
+      if (s.verified && motionLocked(s.motion) && s.motion.phase !== 'submitting' && state.command?.command_id !== s.motion.commandId) void this.queryMotion(side);
     } catch (error) {
       if (this.closed) return;
       this.onArm(side, { online: false });
@@ -204,8 +254,9 @@ export class DualArmControl {
     const token = s.token;
     const pending = (async () => {
       try {
-        const status = token ? await this.armRequest(side, 'control/heartbeat', {}, true) : await this.armRequest(side, 'control/status');
+        const status = token ? await this.armRequest(side, 'control/heartbeat', { command_protocol: 1 }, true) : await this.armRequest(side, 'control/status');
         if (this.closed || s.token !== token) return false;
+        if (status.instance_id && (!this.observeProtocol(side, status) || s.token !== token)) return false;
         const owned = !!token && status.has_owner && status.owner_client_id === this.clientId;
         if (token && !owned) {
           this.error(side, '控制权', new ApiFailure('本臂控制权已失效，请重新申请', 'LEASE_LOST'));
@@ -213,6 +264,7 @@ export class DualArmControl {
         }
         s.verified = owned;
         if (owned) this.recover(side, '控制权验证');
+        if (owned) void this.configuration.restore(side);
         this.onArm(side, { owned, leaseChecking: false, owner: status.owner_name || status.owner_client_id || '', ownerExpires: status.expires_in_seconds });
         return owned;
       } catch (error) {
@@ -233,56 +285,78 @@ export class DualArmControl {
     await this.checkLease(side);
     this.later(() => this.lease(side), 2000);
   }
-  async command(side, operation, body = {}) {
+  async command(side, operation, body = {}, details = false) {
     const s = this.session(side);
     if (s.pending) return false;
     s.pending = true; this.onArm(side, { pending: true });
+    const token = s.token;
+    let responseData;
     try {
       if (!this.fresh(side) && !['robot/stop', 'jog/stop', 'control/release'].includes(operation)) throw new ApiFailure('反馈已过期，请等待重新连接', 'STALE');
       if (operation === 'control/acquire') {
         if (s.token) return await this.checkLease(side);
-        const result = await this.armRequest(side, operation, { client_id: this.clientId, client_name: '双臂上位机' });
+        const result = await this.armRequest(side, operation, { client_id: this.clientId, client_name: '双臂上位机', command_protocol: 1 });
         if (!result.token) throw new ApiFailure('控制权响应缺少 token', 'INVALID_RESPONSE');
         s.token = result.token; s.verified = true; this.persist(side);
+        this.observeProtocol(side, result);
+        this.persist(side);
         this.onArm(side, { owned: true, leaseChecking: false });
         for (const operation of ['控制权', '控制权验证']) this.recover(side, operation);
       } else {
         if (!s.verified && !['control/release','robot/stop','robot/jog/stop'].includes(operation)) throw new ApiFailure('本臂控制权尚未验证，请等待连接恢复', 'UNVERIFIED');
         if (operation === 'control/release' || operation === 'robot/disable') await this.stopJog(side);
-        await this.armRequest(side, operation, body, true);
+        const result = await this.armRequest(side, operation, body, true);
+        if (this.closed || token !== s.token) return details ? { success: false, error: new ApiFailure('控制会话已变更，旧响应已忽略') } : false;
+        responseData = result;
+        this.observeProtocol(side, result);
+        if (token !== s.token) return details ? { success: false, error: new ApiFailure('App 已重启，旧响应已忽略') } : false;
         if (operation === 'control/release') this.forget(side);
       }
       this.onEvent(side, `${operation} 已受理；状态以 App 反馈为准`);
       this.recover(side, s.error?.operation);
-      return true;
-    } catch (error) { this.error(side, operation, error); return false; }
+      return details ? { success: true, data: responseData } : true;
+    } catch (error) {
+      if (this.closed || (operation !== 'control/acquire' && token !== s.token)) return details ? { success: false, error: new ApiFailure('控制会话已变更，旧错误已忽略') } : false;
+      this.error(side, operation, error); return details ? { success: false, error } : false;
+    }
     finally { s.pending = false; this.onArm(side, { pending: false }); }
   }
   async move(side, kind, input) {
     const session = this.session(side);
-    if (session.pending || session.stopping || session.held || motionLocked(session.motion)) return false;
+    if (session.pending || session.stopping || session.stopRequest || session.held || motionLocked(session.motion)) return false;
     try {
       if (!this.fresh(side)) throw new ApiFailure('反馈已过期，请等待重新连接', 'STALE');
       if (!session.token || !session.verified) throw new ApiFailure('请先获取并验证本臂控制权', 'NO_CONTROL');
       if (!session.state.is_enabled || session.state.motion_busy || !['IDLE', 'STOPPED'].includes(session.state.robot_state)) throw new ApiFailure('本臂尚未准备好，请等待使能且运动停止', 'NOT_READY');
       const body = motionRequest(kind, input);
       const trackingBody = { ...body };
-      session.motion = { kind, body: trackingBody, phase: 'submitting', started: Date.now(), afterTimestamp: session.state.timestamp };
+      const fence = this.fence(side), commandId = crypto.randomUUID(), token = session.token;
+      session.motion = { commandId, instanceId: fence.instance_id, epoch: fence.motion_epoch, kind, body: trackingBody, phase: 'submitting', started: Date.now(), afterSequence: session.state.state_seq };
+      this.persist(side);
       this.onArm(side, { motion: session.motion, motionLocked: true });
-      const success = await this.command(side, `robot/${kind}`, body);
-      session.motion = { ...session.motion, phase: success ? 'waiting' : session.error?.code === 'NETWORK' ? 'unknown' : 'failed', acceptedAt: Date.now(), afterTimestamp: session.state.timestamp };
+      const result = await this.command(side, `robot/${kind}`, { ...body, ...fence, command_id: commandId }, true);
+      const success = result?.success === true;
+      if (this.closed || session.motion?.commandId !== commandId) return success;
+      // A stop or restart may have occurred while the request was in flight.
+      // Its response must never remove the cancellation state or its fence.
+      if (session.motion.phase === 'submitting') session.motion = { ...session.motion, phase: token !== session.token || result?.error?.code === 'NETWORK' ? 'unknown' : success ? 'waiting' : 'failed', acceptedAt: Date.now() };
+      if (result?.data?.command?.command_id === commandId && session.state) session.motion = advanceMotion(session.motion, { ...session.state, command: result.data.command }, session.definition.joint_names);
+      this.persist(side);
       this.onArm(side, { motion: session.motion, motionLocked: motionLocked(session.motion) });
+      if (result?.error?.code === 4101 && session.motion.stopEpoch > session.motion.epoch) this.recover(side, `robot/${kind}`);
       if (success) this.recover(side, `精确运动 ${kind}`);
       return success;
     } catch (error) { this.error(side, `精确运动 ${kind}`, error); return false; }
   }
   startJog(side, kind, index, sign, speed, frame) {
     const s = this.session(side);
-    if (s.held || s.stopping || s.pending || motionLocked(s.motion) || !s.token || !s.verified || !this.fresh(side) || !s.state.is_enabled || !['IDLE','STOPPED'].includes(s.state.robot_state)) return false;
+    if (s.held || s.stopping || s.stopRequest || s.pending || motionLocked(s.motion) || !s.token || !s.verified || !this.fresh(side) || !s.state.is_enabled || !['IDLE','STOPPED'].includes(s.state.robot_state)) return false;
     const length = kind === 'cartesian' ? 6 : kind === 'svd' ? 1 : 7;
     if (!['joint','cartesian','nullspace','svd'].includes(kind) || !Number.isInteger(index) || index < 0 || index >= length || ![-1,1].includes(sign) || !Number.isFinite(speed) || speed <= 0 || speed > .5) return false;
     const values = Array(length).fill(0); values[index] = kind === 'svd' ? sign * speed : sign;
-    const body = { timeout: .25, speed, ...(kind === 'cartesian' ? { twist: values, frame } : kind === 'svd' ? { dim_speeds: values } : { joints: values }) };
+    let fence;
+    try { fence = this.fence(side); } catch (error) { this.error(side, '点动协议', error); return false; }
+    const body = { ...fence, timeout: .25, speed, ...(kind === 'cartesian' ? { twist: values, frame } : kind === 'svd' ? { dim_speeds: values } : { joints: values }) };
     const held = { token: s.token, promise: null }; s.held = held;
     this.onArm(side, { jogging: true });
     const tick = async () => {
@@ -303,20 +377,49 @@ export class DualArmControl {
     // Drain the start request first, so a delayed start cannot overtake stop.
     const stop = (async () => {
       try { await held.promise; } catch { /* Still send stop after a rejected/unknown start. */ }
-      try { await this.armRequest(side, 'robot/jog/stop', {}, true, held.token); }
+      try { const result = await this.armRequest(side, 'robot/jog/stop', { instance_id: s.instanceId }, true, held.token); this.observeProtocol(side, result); }
       catch (error) { this.error(side, '停止点动', error); }
-      finally { s.stopping = null; this.onArm(side, { stopping: false }); }
+      finally { s.stopping = null; this.onArm(side, { stopping: !!s.stopRequest }); }
     })();
     s.stopping = stop; return stop;
   }
   async stop(side) {
     const s = this.session(side);
+    if (s.stopRequest) return s.stopRequest;
+    this.onArm(side, { stopping: true });
     if (motionLocked(s.motion)) { s.motion = { ...s.motion, phase: 'stopping' }; this.onArm(side, { motion: s.motion, motionLocked: true }); }
-    await this.stopJog(side);
-    // Stop must remain available while another command is pending.
-    try { await this.armRequest(side, s.state?.motion_busy === false ? 'robot/jog/stop' : 'robot/stop', {}, true); this.onEvent(side, '停止已受理；请确认反馈停止'); }
-    catch (error) { this.error(side, 'robot/stop', error); }
-    return s.state;
+    this.persist(side);
+    const token = s.token, instance = s.instanceId;
+    s.stopRequest = (async () => {
+      await this.stopJog(side);
+      // An App-side epoch fence makes this safe even if it overtakes MoveJ.
+      try {
+        const result = await this.armRequest(side, 'robot/stop', { instance_id: instance }, true, token);
+        if (this.closed || token !== s.token || !this.observeProtocol(side, result)) return;
+        if (motionLocked(s.motion)) s.motion = { ...s.motion, phase: 'stopping', stopInstance: result.instance_id, stopEpoch: result.motion_epoch, stopAfterSequence: result.state_seq, quiet: 0, lastSequence: undefined };
+        this.persist(side); this.onArm(side, { motion: s.motion, motionLocked: motionLocked(s.motion) });
+        this.onEvent(side, '停止已受理；请确认反馈停止');
+      } catch (error) { this.error(side, 'robot/stop', error); }
+      finally { s.stopRequest = null; this.onArm(side, { stopping: !!s.stopping }); }
+    })();
+    return s.stopRequest;
+  }
+  async queryMotion(side) {
+    const session = this.session(side), motion = session.motion;
+    if (!motion?.commandId || session.queryingMotion || this.clock() - (session.lastMotionQuery ?? -Infinity) < 500) return;
+    session.queryingMotion = true; session.lastMotionQuery = this.clock();
+    const token = session.token;
+    try {
+      const result = await this.armRequest(side, `robot/command_status?command_id=${encodeURIComponent(motion.commandId)}`, undefined, true);
+      if (this.closed || token !== session.token || session.motion?.commandId !== motion.commandId || !this.observeProtocol(side, result) || !session.state) return;
+      session.queriedCommand = result.command;
+      session.motion = advanceMotion(session.motion, { ...session.state, command: result.command }, session.definition.joint_names);
+      this.persist(side); this.onArm(side, { motion: session.motion, motionLocked: motionLocked(session.motion) });
+    } catch (error) {
+      // Not-found is deliberately inconclusive: the original request may still
+      // be in transit. Only a server result or a stop fence can unlock it.
+      if (error.code !== 4103 && error.code !== 'NETWORK' && token === session.token) this.error(side, '查询运动结果', error);
+    } finally { session.queryingMotion = false; }
   }
   close() {
     this.closed = true; for (const timer of this.timers) clearTimeout(timer); this.timers.clear();

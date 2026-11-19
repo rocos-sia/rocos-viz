@@ -132,8 +132,30 @@ node design/dualarm/v2/check-logs.mjs
 试验页的 `left_base` / `right_base` 位于各自 J1 之前，固定不随关节旋转。
 反馈与工件坐标按当前臂肩部参考系表达；示例目标和已有示例工件已做平移转换，工具 TCP 保持法兰相对定义。
 `MoveJ_IK` 的目标是法兰，`MoveL` 的目标是工具，页面明确区分。
-运动仍为浏览器本地预览，不会因为选择试验模型而连接 App 执行运动。
+仅显式 `?mode=demo` 使用浏览器本地演示；默认页面连接真实 App，`?base=shoulder`
+选择肩部预览方案，真实模型及运动链仍以 App 返回值为准。
 坐标安装关系来自同级 MuJoCo 的 `config/dualarm/shoulder_frames.json`，原模型和试验模型都随构建打包。
 完整启动、转换与回退说明见 [肩部试验说明](../../../../rocos-mujoco/config/dualarm/SHOULDER_TRIAL.md)。
 
 启动独立预览后运行 `node design/dualarm/v2/check-shoulder.mjs`，验证两版反馈转换、J1 点动时基座固定、独立反馈、工件位置、模型下载和参考系标注。
+
+## 请求与刷新恢复
+
+真实接入要求配套 App 支持本地协议 `0.5.0-local` 的命令追踪协议 1；旧 App 缺少
+实例或序号时锁定新运动，并给出更新提示。页面发送按臂的 `command_id` 和运动代次，
+停止后迟到响应不能撤销停止状态。请求超时后保持结果未知，只有原命令的服务端结果
+或已受理的新代次停止及后续静止反馈可解锁；不会自动重发运动。
+
+控制令牌、未确认命令和标定会话 ID 保存在本标签页的 `sessionStorage`。
+刷新先验证控制权，再回读服务端真实采点、计算阈值和保存状态；不缓存样本代替 App。
+App 实例改变时使旧控制权、标定恢复句柄失效，旧运动保持待确认。
+排序使用 `instance_id/state_seq`，本地超时使用 `performance.now()`；墙上时间仅显示。
+
+```bash
+node --experimental-strip-types --test test/dualarm-*.test.mjs
+```
+
+真实浏览器边界回归 `check-command-recovery.mjs` 必须由同级 App 的
+`dualarm/tests/command_integration.py --browser ...` 启动，拒绝直接操作部署端口 5186。
+测试覆盖停止与迟到 MoveJ、未送达/丢失响应、校时与冻结序号、刷新恢复四个采点，
+并输出 `/tmp/dualarm-command-recovery-browser.json` 和三种尺寸截图。

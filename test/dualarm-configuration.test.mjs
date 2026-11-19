@@ -19,7 +19,7 @@ function fixture() {
     if (path.includes('/calibration/')) data = { session_id: 'left-session', name: 'probe', samples: captured, captured: captured.filter(Boolean).length, result, package_digest: 'original', package_revision: 2 };
     return new Response(JSON.stringify({ success: true, data }));
   } });
-  for (const side of ['left', 'right']) Object.assign(client.session(side), { token: `${side}-token`, verified: true, updated: Date.now(), state: { robot_state: 'STOPPED', motion_busy: false } });
+  for (const side of ['left', 'right']) Object.assign(client.session(side), { token: `${side}-token`, verified: true, updated: client.clock(), instanceId: 'test-app', state: { robot_state: 'STOPPED', motion_busy: false } });
   return { client, calls, patches, errors };
 }
 

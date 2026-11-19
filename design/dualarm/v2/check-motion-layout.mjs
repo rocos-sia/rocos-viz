@@ -31,14 +31,16 @@ try {
       const match = path.match(/^\/api\/arms\/(left|right)\/(.+)$/);
       if (!match) return route.abort();
       const [, side, operation] = match, state = states[side];
+      const tracking = () => ({ instance_id: state.instance_id, motion_epoch: state.motion_epoch, state_seq: state.state_seq, command_protocol: 1, command: state.command });
       if (operation === 'control/acquire') {
         owners[side] = request.postDataJSON().client_id;
-        return reply({ token: `${side}-fixture`, has_owner: true, owner_client_id: owners[side] });
+        return reply({ ...tracking(), token: `${side}-fixture`, has_owner: true, owner_client_id: owners[side] });
       }
-      if (operation.startsWith('control/')) return reply({ has_owner: !!owners[side], owner_client_id: owners[side] || '' });
+      if (operation.startsWith('control/')) return reply({ ...tracking(), has_owner: !!owners[side], owner_client_id: owners[side] || '' });
       if (operation === 'robot/state') {
         const wide = ++sequence % 2 === 0;
         state.timestamp = Date.now();
+        state.state_seq++;
         state.robot_state ||= 'STOPPED';
         state.is_enabled = true;
         state.joint_states.forEach(joint => { joint.position = wide ? -1.7123456 : .00001; });
@@ -52,10 +54,10 @@ try {
       }
       assert.equal(request.method(), 'POST');
       requests.push({ side, operation, body: request.postDataJSON(), headers: request.headers() });
-      if (operation === 'robot/jog/stop') { state.robot_state = 'STOPPED'; state.motion_busy = false; }
+      if (operation === 'robot/jog/stop' || operation === 'robot/stop') { state.robot_state = 'STOPPED'; state.motion_busy = false; state.motion_epoch++; }
       else if (operation.startsWith('robot/jog/')) { state.robot_state = 'JOGGING'; state.motion_busy = true; }
-      else if (/robot\/move/.test(operation)) return reply({}, !rejected, rejected ? -2308 : 0);
-      return reply({});
+      else if (/robot\/move/.test(operation)) { state.command = { command_id: request.postDataJSON().command_id, motion_epoch: state.motion_epoch, status: rejected ? 'rejected' : 'finished' }; return reply(tracking(), !rejected, rejected ? -2308 : 0); }
+      return reply(tracking());
     });
     for (const state of Object.values(states)) { state.robot_state = 'STOPPED'; state.motion_busy = false; }
     await page.goto(`${origin}/?base=shoulder`);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DualArmControl, motionRequest } from '../src/dualarm/control/live.mjs';
 const memoryStorage = () => {const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};};
-const response = (data={}, success=true, code=0) => new Response(JSON.stringify({success,code,message:success?'ok':code===3007?'Invalid or missing control credentials for selected arm':'rejected',data}),{headers:{'X-Rocos-Request-Id':'req-123'}});
+const response = (data={}, success=true, code=0) => new Response(JSON.stringify({success,code,message:success?'ok':code===3007?'Invalid or missing control credentials for selected arm':'rejected',data:{instance_id:'test-app',motion_epoch:1,state_seq:1,command_protocol:1,...data}}),{headers:{'X-Rocos-Request-Id':'req-123'}});
 const motionInput = () => ({ target:[90,-90,0,0,0,0,0], pose:[100,-200,300,0,0,0,2], velocity:'0.1', acceleration:'0.3', jerk:'5', tool:'probe' });
 test('precise motion converts units, normalizes orientation and distinguishes flange/tool targets',()=>{
  const input=motionInput();
@@ -22,7 +22,7 @@ test('precise motion converts units, normalizes orientation and distinguishes fl
 test('precise motion requires fresh verified enabled idle arm and rejects invalid input before fetching',async()=>{
  const {client,calls}=setup();
  try {
-  for(const patch of [{updated:0},{verified:false},{held:{}},{stopping:Promise.resolve()},{pending:true},{state:{robot_state:'RUNNING',is_enabled:true}},{state:{robot_state:'STOPPED',is_enabled:false}},{state:{robot_state:'STOPPED',is_enabled:true,motion_busy:true}}]){
+  for(const patch of [{updated:-Infinity},{verified:false},{held:{}},{stopping:Promise.resolve()},{pending:true},{state:{robot_state:'RUNNING',is_enabled:true}},{state:{robot_state:'STOPPED',is_enabled:false}},{state:{robot_state:'STOPPED',is_enabled:true,motion_busy:true}}]){
    const session=client.session('left'),previous={...session};Object.assign(session,patch);
    assert.equal(await client.move('left','movej',motionInput()),false);Object.assign(session,previous);
   }
@@ -47,7 +47,7 @@ test('precise motion failure is reported once for its arm without resending or a
 function setup(fetcher) {
   const calls=[], errors=[], patches=[];
   const client=new DualArmControl({storage:memoryStorage(),fetcher:async(path,options)=>{calls.push({path,options});return fetcher?fetcher(path,options):response();},onError:(side,error)=>errors.push({side,...error}),onArm:(side,patch)=>patches.push({side,...patch})});
-  for (const side of ['left','right']) Object.assign(client.session(side),{token:side+'-token',verified:true,updated:Date.now(),state:{robot_state:'STOPPED',is_enabled:true}});
+  for (const side of ['left','right']) Object.assign(client.session(side),{token:side+'-token',verified:true,updated:client.clock(),instanceId:'test-app',epoch:1,protocol:1,definition:{joint_names:Array.from({length:7},(_,i)=>`J${i+1}`)},state:{robot_state:'STOPPED',is_enabled:true,state_seq:1}});
   return {client,calls,errors,patches};
 }
 test('credentials and routes are isolated per arm; invalid arm never fetches',async()=>{
@@ -67,7 +67,7 @@ test('invalid token revokes only that arm; command is not retried',async()=>{
  try {await client.command('right','robot/enable');assert.equal(client.session('right').token,'');assert.equal(client.session('left').token,'left-token');assert.equal(calls.length,1);} finally {client.close();}
 });
 test('expired feedback blocks new motion, but permits stop',async()=>{
- const {client,calls}=setup();client.session('left').updated=0;
+ const {client,calls}=setup();client.session('left').updated=-Infinity;
  try {assert.equal(client.startJog('left','joint',0,1,.01,'BASE'),false);assert.equal(await client.command('left','robot/enable'),false);await client.stop('left');assert.deepEqual(calls.map(c=>c.path),['/api/arms/left/robot/stop']);} finally {client.close();}
 });
 test('release during in-flight jog drains start then stops without another jog',async()=>{
@@ -97,13 +97,13 @@ test('success with PlanFinished code is accepted; unsupported-operation 3007 doe
  const {client}=setup(path=>path.endsWith('enable')?response({},true,100):new Response(JSON.stringify({success:false,code:3007,message:'stop failed',data:{robot_state:'STOPPED'}})));
  try {assert.equal(await client.command('left','robot/enable'),true);await client.stop('left');assert.equal(client.session('left').token,'left-token');} finally {client.close();}
 });
-test('frozen App timestamp locks only that arm and retains the last valid snapshot',async()=>{
+test('frozen App sequence locks only that arm and retains the last valid snapshot',async()=>{
  const pose={position:{x:0,y:0,z:0},orientation:{x:0,y:0,z:0,w:1}};
- const snapshot={timestamp:123,robot_state:'STOPPED',is_enabled:true,flange:pose,tcp:pose,joint_states:Array.from({length:7},(_,i)=>({name:`J${i+1}`,position:i*.1}))};
+ const snapshot={timestamp:123,instance_id:'test-app',motion_epoch:1,state_seq:1,command_protocol:1,robot_state:'STOPPED',is_enabled:true,flange:pose,tcp:pose,joint_states:Array.from({length:7},(_,i)=>({name:`J${i+1}`,position:i*.1}))};
  const {client,patches,errors}=setup(()=>response(snapshot));
  client.session('left').definition={joint_names:snapshot.joint_states.map(j=>j.name)};
  try {await client.poll('left');assert.deepEqual(client.session('left').state,snapshot);
-  client.session('left').timestampChanged=Date.now()-1000;
+  client.session('left').sequenceChanged=client.clock()-1000;
   await client.poll('left');assert.equal(errors.at(-1).code,'STALE');assert.ok(patches.some(p=>p.side==='left'&&p.online===false));assert.equal(client.session('right').token,'right-token');
  } finally {client.close();}
 });
@@ -114,7 +114,7 @@ test('reload restores identity/tokens but requires heartbeat before writes',asyn
  old.session('left').token='left-secret';old.session('right').token='right-secret';old.persist();old.close();
  let current;
  current=new DualArmControl({storage,fetcher:async(path,options)=>{calls.push({path,options});return response({has_owner:true,owner_client_id:current.clientId});}});
- Object.assign(current.session('left'),{updated:Date.now(),state:{robot_state:'STOPPED',is_enabled:true}});
+ Object.assign(current.session('left'),{updated:current.clock(),state:{robot_state:'STOPPED',is_enabled:true}});
  try {
   assert.equal(current.clientId,old.clientId);assert.equal(current.session('right').token,'right-secret');assert.equal(current.session('left').verified,false);
   assert.equal(await current.command('left','robot/enable'),false);assert.equal(calls.length,0);
