@@ -7,7 +7,7 @@ const errors=[], requests=[], checks=[];
 page.on('pageerror', e=>errors.push(e.message)); page.on('request',r=>requests.push(r.url()));
 const mark = text => checks.push(text);
 try {
-  await page.goto('http://127.0.0.1:5186');
+  await page.goto('http://127.0.0.1:5186/?mode=demo');
   await page.getByText('实际 URDF · 演示关节姿态').waitFor();
   await page.screenshot({path:'design/dualarm/v2/overview-1440.png',fullPage:true});
   await page.screenshot({path:'design/dualarm/v2/overview.jpg',fullPage:true});
@@ -54,7 +54,7 @@ try {
   const metrics=[];
   for(const width of [1440,768,390,375]) {
     await page.setViewportSize({width,height:900}); await page.waitForTimeout(600);
-    const metric=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth})); assert.equal(metric.width,metric.scroll); metrics.push(metric);
+    const metric=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth})); assert.ok(metric.scroll<=metric.width); metrics.push(metric);
     await page.screenshot({path:`design/dualarm/v2/overview-${width}.png`,fullPage:true});
   }
   await page.emulateMedia({reducedMotion:'reduce'}); mark('Responsive layouts have no horizontal page overflow at 1440/768/390/375');

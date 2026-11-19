@@ -9,11 +9,13 @@
  * in App.tsx by feeding ConfigProvider the matching locale.
  */
 
+import { dualArmMessages } from './dualarm';
 export type Language = 'en' | 'zh';
 
 type Entry = { en: string; zh: string };
 
 const DICT = {
+  ...dualArmMessages,
   "dualLogs.title": {"en": "Controller logs", "zh": "控制器日志"},
   "dualLogs.endpoint": {"en": "Diagnostics address", "zh": "诊断地址"},
   "dualLogs.connect": {"en": "Connect logs", "zh": "连接日志"},
@@ -38,7 +40,7 @@ const DICT = {
   "dualLogs.detail": {"en": "Message and result", "zh": "内容与结果"},
   "dualLogs.accepted": {"en": "Accepted", "zh": "已受理"},
   "dualLogs.rejected": {"en": "Rejected", "zh": "已拒绝"},
-  "dualLogs.hint": {"en": "One read-only connection for both arms. Motion controls remain a local preview.", "zh": "一个只读连接接收两臂日志；运动控件仍为本地预案。"},
+  "dualLogs.hint": {"en": "One read-only diagnostics connection for both arms. Control requests use the App connection separately.", "zh": "一个只读诊断连接接收两臂日志；控制请求使用独立的 App 连接。"},
   "dualLogs.feedbackHint": {"en": "HTTP acceptance does not mean motion completion. Robot state and completion messages are shown separately; no task correlation is implied. Successful polling and heartbeat requests are omitted.", "zh": "接口受理不代表运动完成；状态与运动结束日志单独展示，不关联为同一任务。成功查询及心跳不记入操作反馈。"},
   "dualLogs.empty": {"en": "No matching events.", "zh": "暂无符合筛选条件的记录。"},
   "dualLogs.connectHint": {"en": "Connect to the dual-arm App diagnostics service to read recent history and live events.", "zh": "连接双臂 App 的诊断服务，读取近期历史和实时日志。"},

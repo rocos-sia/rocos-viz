@@ -61,7 +61,7 @@ try {
   for(const width of [1600,1440,768,390,375]) {
     await page.setViewportSize({width,height:1000});await page.waitForTimeout(500);
     const metric=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,scene:document.querySelector('.scene-panel').getBoundingClientRect().toJSON(),feedback:document.querySelector('.compact-feedback').getBoundingClientRect().toJSON(),strip:document.querySelector('.arm-strip').getBoundingClientRect().toJSON()}));
-    assert.equal(metric.width,metric.scroll,`overflow at ${width}`);if(width>=1440){assert.ok(metric.scene.width>800);assert.ok(metric.feedback.height<170);assert.ok(metric.strip.y<15);}
+    assert.ok(metric.scroll<=metric.width,`overflow at ${width}`);if(width>=1440){assert.ok(metric.scene.width>800);assert.ok(metric.feedback.height<170);assert.ok(metric.strip.y<15);}
     metrics.push(metric);await page.screenshot({path:`design/dualarm/v2/layout-${width}.png`,fullPage:true});
     if(width===1600)await page.screenshot({path:'design/dualarm/v2/overview.jpg',fullPage:true});
   }

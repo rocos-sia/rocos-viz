@@ -27,8 +27,9 @@ export function poseMatrix(pose?: Pose | null): Matrix4 | null {
 }
 
 /** URDF preview FK, expressed in each controller chain's base, in SI units. */
-export function previewFlange(robot: URDFRobot, side: keyof typeof dualArmChains): Pose | null {
-  const chain = dualArmChains[side];
+export function previewFlange(robot: URDFRobot, side: keyof typeof dualArmChains,
+  chains = dualArmChains): Pose | null {
+  const chain = chains[side];
   const base = robot.links[chain.base], tip = robot.links[chain.tip];
   if (!base || !tip) return null;
   robot.updateMatrixWorld(true);

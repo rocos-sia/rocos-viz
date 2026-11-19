@@ -3,13 +3,13 @@ import { useT } from '@/i18n/useT';
 import { DualArmLogClient, type ArmScope } from './client';
 import type { DualArmLogsState } from './useDualArmLogs';
 import './logConsole.css';
-const savedAddress = () => { try { return localStorage.getItem('rocos.dualarm.diagnostics') || 'http://127.0.0.1:8082'; } catch { return 'http://127.0.0.1:8082'; } };
+import { diagnosticsAddress } from './address';
 const time = (timestamp: string) => { const date = new Date(timestamp); return Number.isNaN(+date) ? timestamp : `${date.toLocaleTimeString([], { hour12: false })}.${String(date.getMilliseconds()).padStart(3, '0')}`; };
-export default function LogConsole({ logs }: { logs: DualArmLogsState }) {
+export default function LogConsole({ logs, initialScope = 'all' }: { logs: DualArmLogsState; initialScope?: ArmScope | 'all' }) {
   const t = useT();
-  const [endpoint, setEndpoint] = useState(savedAddress);
+  const [endpoint, setEndpoint] = useState(diagnosticsAddress);
   const [tab, setTab] = useState<'alerts' | 'feedback' | 'file'>('alerts');
-  const [scope, setScope] = useState<ArmScope | 'all'>('all'), [level, setLevel] = useState('all'), [search, setSearch] = useState('');
+  const [scope, setScope] = useState<ArmScope | 'all'>(initialScope), [level, setLevel] = useState('all'), [search, setSearch] = useState('');
   const [preview, setPreview] = useState<{ text: string; timestamp: string; truncated: boolean } | null>(null);
   const [fileError, setFileError] = useState(''), [loading, setLoading] = useState(false);
   const request = useRef<AbortController | null>(null);

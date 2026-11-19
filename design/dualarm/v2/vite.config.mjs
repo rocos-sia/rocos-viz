@@ -5,8 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const modelRoot = path.resolve(root, '../../../../rocos-mujoco/config/dualarm');
-const files = ['urdf/dualarm.urdf', ...fs.readdirSync(path.join(modelRoot, 'meshes')).filter(n => n.endsWith('.STL')).map(n => `meshes/${n}`)];
-const font = path.resolve(root, '../proposal-font.woff2');
+const files = ['urdf/dualarm.urdf', 'urdf/dualarm_shoulder.urdf', ...fs.readdirSync(path.join(modelRoot, 'meshes')).filter(n => n.endsWith('.STL')).map(n => `meshes/${n}`)];
+const proxy = { '/api': { target: process.env.DUALARM_APP_ORIGIN || 'http://127.0.0.1:8080', changeOrigin: true } };
 export default defineConfig({
   resolve: { alias: { '@': path.resolve(root, '../../../src') } },
   root, base: './', plugins: [react(), {
@@ -14,7 +14,7 @@ export default defineConfig({
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const name = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\/model\//, '');
-        const file = req.url === '/proposal-font.woff2' ? font : files.includes(name) ? path.join(modelRoot, name) : null;
+        const file = files.includes(name) ? path.join(modelRoot, name) : null;
         if (!file) return next();
         res.setHeader('Content-Type', file.endsWith('.urdf') ? 'application/xml' : 'application/octet-stream');
         fs.createReadStream(file).pipe(res);
@@ -22,8 +22,7 @@ export default defineConfig({
     },
     generateBundle() {
       for (const name of files) this.emitFile({ type: 'asset', fileName: `model/${name}`, source: fs.readFileSync(path.join(modelRoot, name)) });
-      this.emitFile({ type: 'asset', fileName: 'proposal-font.woff2', source: fs.readFileSync(font) });
     },
-  }], server: { host: '127.0.0.1', port: 5186 }, preview: { host: '127.0.0.1', port: 5186 },
+  }], server: { host: '127.0.0.1', port: 5186, proxy }, preview: { host: '127.0.0.1', port: 5186, proxy },
   build: { outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 1100 },
 });

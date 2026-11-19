@@ -31,7 +31,7 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}), errors=[]
 page.on('pageerror',e=>errors.push(e.message));
 const wait=async predicate=>{for(let n=0;n<100;n++){if(await predicate())return;await new Promise(r=>setTimeout(r,50));}throw Error('condition timeout');};
 try {
-  await page.goto('http://127.0.0.1:5186/#logs');
+  await page.goto('http://127.0.0.1:5186/?mode=demo#logs');
   await page.getByLabel('诊断地址',{exact:true}).fill(endpoint);
   await page.getByRole('button',{name:'连接日志',exact:true}).click();
   await page.getByText('实时接收',{exact:true}).waitFor();
@@ -47,7 +47,7 @@ try {
   await page.getByRole('searchbox').fill('');
   for(const width of [1440,768,390]) {
     await page.setViewportSize({width,height:1000});
-    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth));
     await page.screenshot({path:`design/dualarm/v2/logs-${width}.png`,fullPage:true});
   }
   await page.setViewportSize({width:1440,height:1000});
